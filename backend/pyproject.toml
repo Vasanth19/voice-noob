@@ -141,6 +141,7 @@ ignore = [
     "E501",    # line too long, handled by formatter
     "B008",    # do not perform function calls in argument defaults
     "C901",    # too complex
+    "COM812",  # trailing comma, conflicts with formatter
     "PLR0913", # too many arguments
     "S101",    # use of assert
     "S104",    # hardcoded bind all interfaces (intentional for dev)

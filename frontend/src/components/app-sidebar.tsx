@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bot, Phone, History, Settings, LayoutDashboard, Mic, Zap } from "lucide-react";
+import { Bot, Phone, History, Settings, LayoutDashboard, Mic, Zap, Users } from "lucide-react";
 
 import {
   Sidebar,
@@ -38,6 +38,11 @@ const navItems = [
     title: "Voice Agents",
     url: "/dashboard/agents",
     icon: Bot,
+  },
+  {
+    title: "CRM",
+    url: "/dashboard/crm",
+    icon: Users,
   },
   {
     title: "Integrations",

@@ -10,6 +10,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
 from app.db.base import Base
+from app.models.appointment import Appointment  # noqa: F401
+from app.models.call_interaction import CallInteraction  # noqa: F401
+from app.models.contact import Contact  # noqa: F401
 from app.models.user import User  # noqa: F401
 
 # Alembic Config object

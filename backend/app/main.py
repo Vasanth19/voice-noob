@@ -10,7 +10,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.api import health
+from app.api import crm, health
 from app.core.config import settings
 from app.db.redis import close_redis, get_redis
 
@@ -83,6 +83,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, tags=["health"])
+app.include_router(crm.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/")
