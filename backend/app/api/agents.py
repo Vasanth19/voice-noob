@@ -30,6 +30,18 @@ class CreateAgentRequest(BaseModel):
     system_prompt: str = Field(..., min_length=10)
     language: str = Field(default="en-US")
     voice: str = Field(default="shimmer")
+    # TTS provider settings
+    tts_provider: str = Field(default="elevenlabs", pattern="^(elevenlabs|openai|google)$")
+    tts_model: str = Field(default="eleven_turbo_v2_5")
+    tts_voice_id: str | None = Field(default=None, description="ElevenLabs voice ID")
+    # STT provider settings
+    stt_provider: str = Field(default="deepgram", pattern="^(deepgram|openai|google)$")
+    stt_model: str = Field(default="nova-3")
+    # LLM provider settings
+    llm_provider: str = Field(
+        default="openai-realtime", pattern="^(openai-realtime|openai|anthropic|google)$"
+    )
+    llm_model: str = Field(default="gpt-realtime-2025-08-28")
     enabled_tools: list[str] = Field(default_factory=list)
     enabled_tool_ids: dict[str, list[str]] = Field(
         default_factory=dict,
@@ -62,6 +74,16 @@ class UpdateAgentRequest(BaseModel):
     system_prompt: str | None = Field(None, min_length=10)
     language: str | None = None
     voice: str | None = None
+    # TTS provider settings
+    tts_provider: str | None = Field(None, pattern="^(elevenlabs|openai|google)$")
+    tts_model: str | None = None
+    tts_voice_id: str | None = Field(default=None, description="ElevenLabs voice ID")
+    # STT provider settings
+    stt_provider: str | None = Field(None, pattern="^(deepgram|openai|google)$")
+    stt_model: str | None = None
+    # LLM provider settings
+    llm_provider: str | None = Field(None, pattern="^(openai-realtime|openai|anthropic|google)$")
+    llm_model: str | None = None
     enabled_tools: list[str] | None = None
     enabled_tool_ids: dict[str, list[str]] | None = Field(
         default=None,
@@ -96,6 +118,16 @@ class AgentResponse(BaseModel):
     system_prompt: str
     language: str
     voice: str
+    # TTS provider settings
+    tts_provider: str
+    tts_model: str
+    tts_voice_id: str | None
+    # STT provider settings
+    stt_provider: str
+    stt_model: str
+    # LLM provider settings
+    llm_provider: str
+    llm_model: str
     enabled_tools: list[str]
     enabled_tool_ids: dict[str, list[str]]
     phone_number_id: str | None

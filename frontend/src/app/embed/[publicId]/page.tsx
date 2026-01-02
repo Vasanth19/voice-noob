@@ -527,9 +527,9 @@ export default function EmbedPage() {
           },
           turn_detection: {
             type: "server_vad",
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 200,
+            threshold: 0.75, // Higher = ignores breathing/soft sounds
+            prefix_padding_ms: 150,
+            silence_duration_ms: 400, // Wait longer before responding
           },
         };
 

@@ -92,3 +92,37 @@ export async function updateSettings(
 
   return response.json();
 }
+
+// ElevenLabs Voices
+
+export interface ElevenLabsVoice {
+  voice_id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  labels: Record<string, string> | null;
+  preview_url: string | null;
+}
+
+export interface ElevenLabsVoicesResponse {
+  voices: ElevenLabsVoice[];
+  has_api_key: boolean;
+}
+
+export async function fetchElevenLabsVoices(
+  workspaceId?: string
+): Promise<ElevenLabsVoicesResponse> {
+  const params = workspaceId ? `?workspace_id=${workspaceId}` : "";
+  const response = await fetchWithTimeout(
+    `${API_BASE}/api/v1/settings/elevenlabs/voices${params}`,
+    {},
+    30000 // 30 second timeout for external API call
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(error.detail ?? "Failed to fetch ElevenLabs voices");
+  }
+
+  return response.json();
+}

@@ -59,6 +59,53 @@ class Agent(Base):
         comment="Voice for TTS (e.g., alloy, shimmer, coral)",
     )
 
+    # TTS Provider Settings (for non-realtime providers)
+    tts_provider: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="elevenlabs",
+        comment="TTS provider: elevenlabs, openai, google",
+    )
+    tts_model: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="eleven_turbo_v2_5",
+        comment="TTS model (e.g., eleven_turbo_v2_5, eleven_flash_v2_5)",
+    )
+    tts_voice_id: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="ElevenLabs voice ID for custom voices",
+    )
+
+    # STT Provider Settings
+    stt_provider: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="deepgram",
+        comment="STT provider: deepgram, openai, google",
+    )
+    stt_model: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="nova-3",
+        comment="STT model (e.g., nova-3, whisper-1)",
+    )
+
+    # LLM Provider Settings
+    llm_provider: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="openai-realtime",
+        comment="LLM provider: openai-realtime, openai, anthropic, google",
+    )
+    llm_model: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="gpt-realtime-2025-08-28",
+        comment="LLM model (e.g., gpt-4o, claude-sonnet-4-5)",
+    )
+
     # Turn detection settings (for OpenAI Realtime API)
     turn_detection_mode: Mapped[str] = mapped_column(
         String(20),

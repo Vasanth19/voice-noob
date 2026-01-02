@@ -446,7 +446,21 @@ async def create_webrtc_session(
     tool_registry = ToolRegistry(
         db, user_id, integrations=integrations, workspace_id=workspace_uuid
     )
-    tools = tool_registry.get_all_tool_definitions(agent.enabled_tools, agent.enabled_tool_ids)
+    raw_tools = tool_registry.get_all_tool_definitions(agent.enabled_tools, agent.enabled_tool_ids)
+
+    # Convert to OpenAI Realtime API format (flatter structure)
+    tools = []
+    for tool in raw_tools:
+        if tool.get("type") == "function" and "function" in tool:
+            func = tool["function"]
+            tools.append({
+                "type": "function",
+                "name": func.get("name"),
+                "description": func.get("description", ""),
+                "parameters": func.get("parameters", {"type": "object", "properties": {}}),
+            })
+        else:
+            tools.append(tool)
 
     # Build instructions with language directive
     system_prompt = agent.system_prompt or "You are a helpful voice assistant."
@@ -467,9 +481,9 @@ async def create_webrtc_session(
         "input_audio_transcription": {"model": "whisper-1"},
         "turn_detection": {
             "type": "server_vad",
-            "threshold": agent.turn_detection_threshold or 0.5,
-            "prefix_padding_ms": agent.turn_detection_prefix_padding_ms or 200,
-            "silence_duration_ms": agent.turn_detection_silence_duration_ms or 200,
+            "threshold": agent.turn_detection_threshold or 0.75,
+            "prefix_padding_ms": agent.turn_detection_prefix_padding_ms or 150,
+            "silence_duration_ms": agent.turn_detection_silence_duration_ms or 400,
         },
     }
 
@@ -616,18 +630,48 @@ async def get_ephemeral_token(
             token_data = response.json()
             token_logger.info("ephemeral_token_created")
 
+            # Get workspace from agent if not provided in query params
+            effective_workspace_uuid = workspace_uuid
+            if not effective_workspace_uuid:
+                # Look up the agent's assigned workspace
+                from app.models.workspace import AgentWorkspace
+                ws_result = await db.execute(
+                    select(AgentWorkspace).where(AgentWorkspace.agent_id == agent.id)
+                )
+                agent_workspace = ws_result.scalar_one_or_none()
+                if agent_workspace:
+                    effective_workspace_uuid = agent_workspace.workspace_id
+                    token_logger.info("using_agent_workspace", workspace_id=str(effective_workspace_uuid))
+
             # Get integration credentials for the workspace
             integrations: dict[str, dict[str, Any]] = {}
-            if workspace_uuid:
-                integrations = await get_workspace_integrations(user_uuid, workspace_uuid, db)
+            if effective_workspace_uuid:
+                integrations = await get_workspace_integrations(user_uuid, effective_workspace_uuid, db)
 
             # Build tool definitions for the agent
             tool_registry = ToolRegistry(
-                db, user_id, integrations=integrations, workspace_id=workspace_uuid
+                db, user_id, integrations=integrations, workspace_id=effective_workspace_uuid
             )
-            tools = tool_registry.get_all_tool_definitions(
+            raw_tools = tool_registry.get_all_tool_definitions(
                 agent.enabled_tools, agent.enabled_tool_ids
             )
+
+            # Convert to OpenAI Realtime API format (flatter structure)
+            # Standard format: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
+            # Realtime format: {"type": "function", "name": ..., "description": ..., "parameters": ...}
+            tools = []
+            for tool in raw_tools:
+                if tool.get("type") == "function" and "function" in tool:
+                    func = tool["function"]
+                    tools.append({
+                        "type": "function",
+                        "name": func.get("name"),
+                        "description": func.get("description", ""),
+                        "parameters": func.get("parameters", {"type": "object", "properties": {}}),
+                    })
+                else:
+                    # Already in correct format or unknown format
+                    tools.append(tool)
 
             token_logger.info(
                 "tools_prepared",
@@ -723,10 +767,12 @@ async def save_transcript(
     if not agent:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
 
-    # Verify user owns this agent
-    user_uuid = user_id_to_uuid(user_id)
-    if agent.user_id != user_uuid:
+    # Verify user owns this agent (agent.user_id is Integer, not UUID)
+    if agent.user_id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to access this agent")
+
+    # Convert to UUID for models that use UUID for user_id
+    user_uuid = user_id_to_uuid(user_id)
 
     # Skip if transcript is empty
     if not request.transcript.strip():

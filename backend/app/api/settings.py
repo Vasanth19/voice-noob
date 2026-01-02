@@ -2,6 +2,7 @@
 
 import uuid
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import and_, select
@@ -13,6 +14,9 @@ from app.models.user_settings import UserSettings
 from app.models.workspace import Workspace
 
 router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
+
+# ElevenLabs API configuration
+ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1"
 
 
 class UpdateSettingsRequest(BaseModel):
@@ -36,6 +40,24 @@ class SettingsResponse(BaseModel):
     telnyx_api_key_set: bool
     twilio_account_sid_set: bool
     workspace_id: str | None = None
+
+
+class ElevenLabsVoice(BaseModel):
+    """ElevenLabs voice details."""
+
+    voice_id: str
+    name: str
+    category: str | None = None
+    description: str | None = None
+    labels: dict[str, str] | None = None
+    preview_url: str | None = None
+
+
+class ElevenLabsVoicesResponse(BaseModel):
+    """Response containing list of ElevenLabs voices."""
+
+    voices: list[ElevenLabsVoice]
+    has_api_key: bool
 
 
 async def _validate_workspace_ownership(
@@ -180,6 +202,81 @@ async def update_settings(
     await db.commit()
 
     return {"message": "Settings updated successfully"}
+
+
+@router.get("/elevenlabs/voices", response_model=ElevenLabsVoicesResponse)
+async def get_elevenlabs_voices(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    workspace_id: str | None = None,
+) -> ElevenLabsVoicesResponse:
+    """Fetch available voices from ElevenLabs API.
+
+    Args:
+        current_user: Authenticated user
+        db: Database session
+        workspace_id: Optional workspace ID for workspace-specific API key
+
+    Returns:
+        List of available ElevenLabs voices
+    """
+    user_uuid = user_id_to_uuid(current_user.id)
+
+    # Build query conditions
+    conditions = [UserSettings.user_id == user_uuid]
+
+    if workspace_id:
+        workspace_uuid = await _validate_workspace_ownership(workspace_id, current_user.id, db)
+        conditions.append(UserSettings.workspace_id == workspace_uuid)
+    else:
+        conditions.append(UserSettings.workspace_id.is_(None))
+
+    result = await db.execute(select(UserSettings).where(and_(*conditions)))
+    settings = result.scalar_one_or_none()
+
+    if not settings or not settings.elevenlabs_api_key:
+        return ElevenLabsVoicesResponse(voices=[], has_api_key=False)
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{ELEVENLABS_API_URL}/voices",
+                headers={"xi-api-key": settings.elevenlabs_api_key},
+            )
+
+            if response.status_code == status.HTTP_401_UNAUTHORIZED:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid ElevenLabs API key",
+                )
+
+            response.raise_for_status()
+            data = response.json()
+
+            voices = [
+                ElevenLabsVoice(
+                    voice_id=voice["voice_id"],
+                    name=voice["name"],
+                    category=voice.get("category"),
+                    description=voice.get("description"),
+                    labels=voice.get("labels"),
+                    preview_url=voice.get("preview_url"),
+                )
+                for voice in data.get("voices", [])
+            ]
+
+            return ElevenLabsVoicesResponse(voices=voices, has_api_key=True)
+
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"ElevenLabs API error: {e.response.status_code}",
+        ) from e
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to connect to ElevenLabs: {e!s}",
+        ) from e
 
 
 async def get_user_api_keys(

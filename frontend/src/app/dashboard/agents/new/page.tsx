@@ -4,11 +4,12 @@ import { useMemo, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as z from "zod";
 import Link from "next/link";
 import { createAgent, type CreateAgentRequest } from "@/lib/api/agents";
+import { fetchElevenLabsVoices } from "@/lib/api/settings";
 import { AVAILABLE_INTEGRATIONS } from "@/lib/integrations";
 import { getLanguagesForTier, getFallbackLanguage } from "@/lib/languages";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,13 @@ const defaultValues: Partial<AgentFormValues> = {
 export default function NewAgentPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // Fetch ElevenLabs voices
+  const { data: elevenLabsVoicesData, isLoading: isLoadingVoices } = useQuery({
+    queryKey: ["elevenlabs-voices"],
+    queryFn: () => fetchElevenLabsVoices(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
   const form = useForm<AgentFormValues>({
     resolver: zodResolver(agentFormSchema),
@@ -365,27 +373,52 @@ export default function NewAgentPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Voice</FormLabel>
-                        <Select onValueChange={field.onChange}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isLoadingVoices}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a voice" />
+                              <SelectValue
+                                placeholder={
+                                  isLoadingVoices ? "Loading voices..." : "Select a voice"
+                                }
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="21m00Tcm4TlvDq8ikWAM">
-                              Rachel (Female, American)
-                            </SelectItem>
-                            <SelectItem value="ErXwobaYiN019PkySvjV">
-                              Antoni (Male, American)
-                            </SelectItem>
-                            <SelectItem value="MF3mGyEYCl7XYWbV9V6O">
-                              Elli (Female, American)
-                            </SelectItem>
-                            <SelectItem value="pNInz6obpgDQGcFmaJgB">
-                              Adam (Male, American)
-                            </SelectItem>
+                            {elevenLabsVoicesData?.voices &&
+                            elevenLabsVoicesData.voices.length > 0 ? (
+                              elevenLabsVoicesData.voices.map((voice) => (
+                                <SelectItem key={voice.voice_id} value={voice.voice_id}>
+                                  {voice.name}
+                                  {voice.labels?.accent && ` (${voice.labels.accent})`}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <>
+                                <SelectItem value="21m00Tcm4TlvDq8ikWAM">
+                                  Rachel (Female, American)
+                                </SelectItem>
+                                <SelectItem value="ErXwobaYiN019PkySvjV">
+                                  Antoni (Male, American)
+                                </SelectItem>
+                                <SelectItem value="MF3mGyEYCl7XYWbV9V6O">
+                                  Elli (Female, American)
+                                </SelectItem>
+                                <SelectItem value="pNInz6obpgDQGcFmaJgB">
+                                  Adam (Male, American)
+                                </SelectItem>
+                              </>
+                            )}
                           </SelectContent>
                         </Select>
+                        {!elevenLabsVoicesData?.has_api_key && (
+                          <FormDescription className="text-yellow-600">
+                            Add your ElevenLabs API key in Settings to see your custom voices
+                          </FormDescription>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}

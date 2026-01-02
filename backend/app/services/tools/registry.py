@@ -8,6 +8,8 @@ from app.services.tools.calendly_tools import CalendlyTools
 from app.services.tools.call_control_tools import CallControlTools
 from app.services.tools.crm_tools import CRMTools
 from app.services.tools.gohighlevel_tools import GoHighLevelTools
+from app.services.tools.google_docs_tools import GoogleDocsTools
+from app.services.tools.google_sheets_tools import GoogleSheetsTools
 from app.services.tools.shopify_tools import ShopifyTools
 from app.services.tools.sms_tools import TelnyxSMSTools, TwilioSMSTools
 
@@ -45,6 +47,8 @@ class ToolRegistry:
         self._ghl_tools: GoHighLevelTools | None = None
         self._calendly_tools: CalendlyTools | None = None
         self._shopify_tools: ShopifyTools | None = None
+        self._google_sheets_tools: GoogleSheetsTools | None = None
+        self._google_docs_tools: GoogleDocsTools | None = None
         self._twilio_sms_tools: TwilioSMSTools | None = None
         self._telnyx_sms_tools: TelnyxSMSTools | None = None
 
@@ -89,6 +93,36 @@ class ToolRegistry:
                 shop_domain=creds["shop_domain"],
             )
             return self._shopify_tools
+
+        return None
+
+    def _get_google_sheets_tools(self) -> GoogleSheetsTools | None:
+        """Get Google Sheets tools if credentials are available."""
+        if self._google_sheets_tools:
+            return self._google_sheets_tools
+
+        creds = self.integrations.get("google-sheets")
+        if creds and creds.get("api_key"):
+            self._google_sheets_tools = GoogleSheetsTools(
+                api_key=creds["api_key"],
+                spreadsheet_id=creds.get("spreadsheet_id"),
+            )
+            return self._google_sheets_tools
+
+        return None
+
+    def _get_google_docs_tools(self) -> GoogleDocsTools | None:
+        """Get Google Docs tools if credentials are available."""
+        if self._google_docs_tools:
+            return self._google_docs_tools
+
+        creds = self.integrations.get("google-docs")
+        if creds and creds.get("api_key"):
+            self._google_docs_tools = GoogleDocsTools(
+                api_key=creds["api_key"],
+                document_id=creds.get("document_id"),
+            )
+            return self._google_docs_tools
 
         return None
 
@@ -192,6 +226,16 @@ class ToolRegistry:
             shopify_tools = ShopifyTools.get_tool_definitions()
             tools.extend(filter_tools("shopify", shopify_tools))
 
+        # Google Sheets tools
+        if "google-sheets" in enabled_tools and self._get_google_sheets_tools():
+            sheets_tools = GoogleSheetsTools.get_tool_definitions()
+            tools.extend(filter_tools("google-sheets", sheets_tools))
+
+        # Google Docs tools (knowledge base)
+        if "google-docs" in enabled_tools and self._get_google_docs_tools():
+            docs_tools = GoogleDocsTools.get_tool_definitions()
+            tools.extend(filter_tools("google-docs", docs_tools))
+
         # Twilio SMS tools
         if "twilio-sms" in enabled_tools and self._get_twilio_sms_tools():
             twilio_tools = TwilioSMSTools.get_tool_definitions()
@@ -204,7 +248,7 @@ class ToolRegistry:
 
         return tools
 
-    async def execute_tool(  # noqa: PLR0911
+    async def execute_tool(  # noqa: PLR0911, PLR0912
         self, tool_name: str, arguments: dict[str, Any]
     ) -> dict[str, Any]:
         """Execute a tool by routing to appropriate handler.
@@ -304,6 +348,39 @@ class ToolRegistry:
                 }
             return await shopify_tools.execute_tool(tool_name, arguments)
 
+        # Google Sheets tools
+        sheets_tool_names = {
+            "sheets_get_data",
+            "sheets_search",
+            "sheets_get_item",
+            "sheets_list_sheets",
+        }
+
+        if tool_name in sheets_tool_names:
+            sheets_tools = self._get_google_sheets_tools()
+            if not sheets_tools:
+                return {
+                    "success": False,
+                    "error": "Google Sheets integration not configured. Please add your API key.",
+                }
+            return await sheets_tools.execute_tool(tool_name, arguments)
+
+        # Google Docs tools (knowledge base)
+        docs_tool_names = {
+            "docs_get_knowledge",
+            "docs_search_knowledge",
+            "docs_get_section",
+        }
+
+        if tool_name in docs_tool_names:
+            docs_tools = self._get_google_docs_tools()
+            if not docs_tools:
+                return {
+                    "success": False,
+                    "error": "Google Docs integration not configured. Please add your API key.",
+                }
+            return await docs_tools.execute_tool(tool_name, arguments)
+
         # Twilio SMS tools
         twilio_tool_names = {
             "twilio_send_sms",
@@ -345,6 +422,10 @@ class ToolRegistry:
             await self._calendly_tools.close()
         if self._shopify_tools:
             await self._shopify_tools.close()
+        if self._google_sheets_tools:
+            await self._google_sheets_tools.close()
+        if self._google_docs_tools:
+            await self._google_docs_tools.close()
         if self._twilio_sms_tools:
             await self._twilio_sms_tools.close()
         if self._telnyx_sms_tools:

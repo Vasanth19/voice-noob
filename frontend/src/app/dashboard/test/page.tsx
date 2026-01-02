@@ -793,6 +793,20 @@ export default function TestAgentPage() {
             console.log("[WebRTC] Function call:", name, argsJson);
 
             try {
+              // Parse arguments safely - handle string, object, or missing args
+              let parsedArgs: Record<string, unknown> = {};
+              if (argsJson) {
+                if (typeof argsJson === "string") {
+                  try {
+                    parsedArgs = JSON.parse(argsJson);
+                  } catch (parseErr) {
+                    console.warn("[WebRTC] Failed to parse argsJson:", argsJson, parseErr);
+                  }
+                } else if (typeof argsJson === "object") {
+                  parsedArgs = argsJson;
+                }
+              }
+
               // Execute tool via backend API
               const toolResponse = await fetch(`${apiBase}/api/v1/tools/execute`, {
                 method: "POST",
@@ -802,7 +816,7 @@ export default function TestAgentPage() {
                 },
                 body: JSON.stringify({
                   tool_name: name,
-                  arguments: JSON.parse(argsJson),
+                  arguments: parsedArgs,
                   agent_id: selectedAgentId,
                 }),
               });

@@ -528,7 +528,7 @@ export const AVAILABLE_INTEGRATIONS: Integration[] = [
     id: "google-sheets",
     name: "Google Sheets",
     slug: "google-sheets",
-    description: "Read and write spreadsheet data",
+    description: "Read menu items, product lists, pricing from Google Sheets",
     category: "database",
     authType: "api_key",
     icon: "https://cdn.simpleicons.org/googlesheets",
@@ -536,21 +536,112 @@ export const AVAILABLE_INTEGRATIONS: Integration[] = [
     isPopular: true,
     fields: [
       {
-        name: "access_token",
-        label: "OAuth Access Token",
+        name: "api_key",
+        label: "API Key",
         type: "password",
         required: true,
-        description: "Google OAuth 2.0 access token",
+        placeholder: "AIzaSy...",
+        description: "Google Cloud API Key (enable Sheets API in console.cloud.google.com)",
       },
       {
-        name: "refresh_token",
-        label: "Refresh Token",
-        type: "password",
+        name: "spreadsheet_id",
+        label: "Default Spreadsheet ID",
+        type: "text",
         required: false,
-        description: "Optional: OAuth refresh token",
+        placeholder: "1GRzdkuFO4aJzqk2NZVBLjCIluV5CVUNHXK3w5hXj_f0",
+        description: "Optional: Default spreadsheet ID (from the sheet URL)",
       },
     ],
-    documentationUrl: "https://developers.google.com/sheets/api/guides/authorizing",
+    documentationUrl: "https://developers.google.com/sheets/api/quickstart/js",
+    tools: [
+      {
+        id: "sheets_get_data",
+        name: "Get Sheet Data",
+        description: "Read all data from a Google Sheet (menu items, products, etc.)",
+        riskLevel: "safe",
+        defaultEnabled: true,
+      },
+      {
+        id: "sheets_search",
+        name: "Search Sheet",
+        description: "Search for items by keyword (e.g., 'vegetarian', 'burger')",
+        riskLevel: "safe",
+        defaultEnabled: true,
+      },
+      {
+        id: "sheets_get_item",
+        name: "Get Item",
+        description: "Get details for a specific item by name",
+        riskLevel: "safe",
+        defaultEnabled: true,
+      },
+      {
+        id: "sheets_list_sheets",
+        name: "List Sheets",
+        description: "List all tabs/sheets in a spreadsheet",
+        riskLevel: "safe",
+        defaultEnabled: true,
+      },
+    ],
+  },
+  {
+    id: "google-docs",
+    name: "Google Docs (Knowledge Base)",
+    slug: "google-docs",
+    description:
+      "Read business info, FAQs, policies, menus from a Google Doc. Perfect for unstructured knowledge.",
+    category: "database",
+    authType: "api_key",
+    icon: "https://cdn.simpleicons.org/googledocs",
+    enabled: true,
+    isPopular: true,
+    fields: [
+      {
+        name: "api_key",
+        label: "API Key",
+        type: "password",
+        required: true,
+        placeholder: "AIzaSy...",
+        description:
+          "Same Google Cloud API Key as Sheets (enable Drive API in console.cloud.google.com)",
+      },
+      {
+        name: "document_id",
+        label: "Default Document ID",
+        type: "text",
+        required: false,
+        placeholder: "1abc123def456...",
+        description:
+          "Optional: Default document ID (from the doc URL after /d/)",
+      },
+    ],
+    documentationUrl: "https://developers.google.com/docs/api/quickstart/js",
+    tools: [
+      {
+        id: "docs_get_knowledge",
+        name: "Get Knowledge Base",
+        description:
+          "Read entire document content (location, hours, FAQs, menu, policies, etc.)",
+        riskLevel: "safe",
+        defaultEnabled: true,
+      },
+      {
+        id: "docs_search_knowledge",
+        name: "Search Knowledge",
+        description:
+          "Search for specific info within the document (hours, parking, vegetarian options)",
+        riskLevel: "safe",
+        defaultEnabled: true,
+      },
+      {
+        id: "docs_get_section",
+        name: "Get Section",
+        description:
+          "Get a specific section by heading (Menu, FAQ, About Us, Location)",
+        riskLevel: "safe",
+        defaultEnabled: true,
+      },
+    ],
   },
 
   // Productivity

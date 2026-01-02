@@ -461,32 +461,56 @@ async def get_integration_credentials(
 
 async def get_workspace_integrations(
     user_id: uuid.UUID,
-    workspace_id: uuid.UUID,
+    workspace_id: uuid.UUID | None,
     db: AsyncSession,
 ) -> dict[str, dict[str, Any]]:
     """Get all active integration credentials for a workspace.
 
+    Includes both workspace-specific integrations AND user-level integrations
+    (where workspace_id is None), which apply to all workspaces.
+
     Args:
         user_id: User ID
-        workspace_id: Workspace ID
+        workspace_id: Workspace ID (optional)
         db: Database session
 
     Returns:
         Dict mapping integration_id to credentials
     """
-    result = await db.execute(
-        select(UserIntegration).where(
-            and_(
-                UserIntegration.user_id == user_id,
+    from sqlalchemy import or_
+
+    # Get integrations that either:
+    # 1. Match the specific workspace_id, OR
+    # 2. Are user-level (workspace_id is None) - these apply to all workspaces
+    conditions = [
+        UserIntegration.user_id == user_id,
+        UserIntegration.is_active.is_(True),
+    ]
+
+    if workspace_id:
+        # Include both workspace-specific AND user-level integrations
+        conditions.append(
+            or_(
                 UserIntegration.workspace_id == workspace_id,
-                UserIntegration.is_active.is_(True),
+                UserIntegration.workspace_id.is_(None),
             )
         )
+    else:
+        # No workspace specified - only get user-level integrations
+        conditions.append(UserIntegration.workspace_id.is_(None))
+
+    result = await db.execute(
+        select(UserIntegration).where(and_(*conditions))
     )
     integrations = result.scalars().all()
 
-    return {
-        integration.integration_id: integration.credentials
-        for integration in integrations
-        if integration.credentials
-    }
+    # Build credentials dict - workspace-specific takes precedence over user-level
+    credentials: dict[str, dict[str, Any]] = {}
+    for integration in integrations:
+        if integration.credentials:
+            # If we already have this integration from workspace-specific, skip user-level
+            if integration.integration_id in credentials and integration.workspace_id is None:
+                continue
+            credentials[integration.integration_id] = integration.credentials
+
+    return credentials

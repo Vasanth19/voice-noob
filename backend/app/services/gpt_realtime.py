@@ -278,9 +278,9 @@ class GPTRealtimeSession:
             "input_audio_transcription": {"model": "whisper-1"},
             "turn_detection": {
                 "type": "server_vad",
-                "threshold": 0.5,
-                "prefix_padding_ms": 200,
-                "silence_duration_ms": 200,
+                "threshold": 0.75,  # Higher = ignores breathing/soft sounds
+                "prefix_padding_ms": 150,
+                "silence_duration_ms": 400,  # Wait longer before responding
             },
             "tools": tools,
             "tool_choice": "auto",

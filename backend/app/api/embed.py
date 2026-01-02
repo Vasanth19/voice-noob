@@ -621,9 +621,23 @@ async def get_embed_ephemeral_token(  # noqa: PLR0915
                 integrations=integrations,
                 workspace_id=workspace_id,
             )
-            tools = tool_registry.get_all_tool_definitions(
+            raw_tools = tool_registry.get_all_tool_definitions(
                 agent.enabled_tools or [], agent.enabled_tool_ids
             )
+
+            # Convert to OpenAI Realtime API format (flatter structure)
+            tools = []
+            for tool in raw_tools:
+                if tool.get("type") == "function" and "function" in tool:
+                    func = tool["function"]
+                    tools.append({
+                        "type": "function",
+                        "name": func.get("name"),
+                        "description": func.get("description", ""),
+                        "parameters": func.get("parameters", {"type": "object", "properties": {}}),
+                    })
+                else:
+                    tools.append(tool)
 
             log.info(
                 "tools_prepared",
