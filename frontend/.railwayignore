@@ -1,0 +1,7 @@
+# Railway ignore - DO NOT ignore Dockerfile
+node_modules/
+.next/
+.git/
+*.log
+.env*
+coverage/
