@@ -57,12 +57,8 @@ ENV PYTHONUNBUFFERED=1
 # Switch to non-root user
 USER appuser
 
-# Expose port (Railway will override with $PORT)
+# Expose port (Railway provides $PORT)
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Run with gunicorn for production
-CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--access-logfile", "-", "--error-logfile", "-"]
+# Run with gunicorn - use PORT env var from Railway (defaults to 8000)
+CMD gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --access-logfile - --error-logfile -
