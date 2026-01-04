@@ -209,8 +209,8 @@ class GPTRealtimeSession:
         if not self.client:
             raise ValueError("OpenAI client not initialized")
 
-        # Use the latest production gpt-realtime model (released Aug 2025)
-        model = "gpt-realtime-2025-08-28"
+        # Use the latest production gpt-4o-realtime model
+        model = "gpt-4o-realtime-preview-2024-12-17"
         self.logger.info("connecting_to_openai_realtime", model=model)
 
         try:
@@ -242,7 +242,26 @@ class GPTRealtimeSession:
 
         # Get tool definitions from registry
         enabled_tools = self.agent_config.get("enabled_tools", [])
-        tools = self.tool_registry.get_all_tool_definitions(enabled_tools)
+        chat_tools = self.tool_registry.get_all_tool_definitions(enabled_tools)
+
+        # Convert Chat Completions format to Realtime API format
+        # Chat format: {"type": "function", "function": {"name": "...", "description": "...", "parameters": {...}}}
+        # Realtime format: {"type": "function", "name": "...", "description": "...", "parameters": {...}}
+        tools = []
+        for tool in chat_tools:
+            if tool.get("type") == "function" and "function" in tool:
+                func = tool["function"]
+                tools.append(
+                    {
+                        "type": "function",
+                        "name": func.get("name"),
+                        "description": func.get("description", ""),
+                        "parameters": func.get("parameters", {"type": "object", "properties": {}}),
+                    }
+                )
+            else:
+                # Already in correct format or unknown format
+                tools.append(tool)
 
         # Get workspace timezone if available
         workspace_timezone = "UTC"
@@ -262,6 +281,16 @@ class GPTRealtimeSession:
         # Default to marin for natural conversational tone
         voice = self.agent_config.get("voice", "marin")
         temperature = self.agent_config.get("temperature", 0.6)
+
+        # Include initial greeting in instructions so AI knows what to say
+        initial_greeting = self.agent_config.get("initial_greeting")
+        if initial_greeting:
+            system_prompt = (
+                f"{system_prompt}\n\n"
+                f"IMPORTANT - Initial Greeting: When the call first connects, "
+                f'you MUST say exactly this greeting: "{initial_greeting}"'
+            )
+
         instructions = build_instructions_with_language(
             system_prompt, language, timezone=workspace_timezone
         )
@@ -468,23 +497,8 @@ class GPTRealtimeSession:
             # triggering VAD and cancelling the greeting response
             await self.connection.input_audio_buffer.clear()
 
-            # Standard OpenAI Realtime pattern:
-            # 1. Create a conversation item with the prompt
-            # 2. Call response.create() to trigger the response
-            # This follows the official OpenAI examples
-            await self.connection.conversation.item.create(
-                item={
-                    "type": "message",
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": f"[Call connected. Say this greeting now: {greeting}]",
-                        }
-                    ],
-                }
-            )
-            # Trigger response generation (no parameters needed)
+            # Simply trigger a response - the AI will follow its instructions
+            # which include the initial greeting. No fake "user" message needed.
             await self.connection.response.create()
             return True
         except Exception as e:

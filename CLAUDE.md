@@ -73,6 +73,23 @@ cd frontend && npm run dev                            # Check compilation warnin
 - `/check` - Run all quality checks, auto-fix issues
 - `/commit` - Run checks, commit with AI message, push
 
+## Git Setup
+
+**Fork of**: `https://github.com/KenKaiii/voice-noob.git`
+
+| Remote | URL | Purpose |
+|--------|-----|---------|
+| origin | `https://github.com/Vasanth19/voice-noob.git` | Your fork (push here) |
+| upstream | `https://github.com/KenKaiii/voice-noob.git` | Original repo (pull updates) |
+
+```bash
+# Sync with original repo
+git fetch upstream && git merge upstream/main
+
+# Push your changes
+git push origin main
+```
+
 ## Tech Stack
 
 **Voice & AI**: Pipecat, Deepgram, ElevenLabs, OpenAI GPT-4o Realtime

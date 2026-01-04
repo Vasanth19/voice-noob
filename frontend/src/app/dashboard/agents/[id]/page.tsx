@@ -158,7 +158,7 @@ const agentFormSchema = z.object({
 
   // Voice Settings
   ttsProvider: z.enum(["elevenlabs", "openai", "google"]),
-  elevenLabsModel: z.string().default("turbo-v2.5"),
+  elevenLabsModel: z.string().default("eleven_turbo_v2_5"),
   elevenLabsVoiceId: z.string().optional(),
   ttsSpeed: z.number().min(0.5).max(2).default(1),
 
@@ -249,6 +249,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
       }
       return getAgent(agentId);
     },
+    staleTime: 0, // Always fetch fresh data to get latest provider settings
     enabled: !isDeleting, // Disable query when deleting to prevent 404
     retry: (failureCount, error) => {
       // Don't retry if we're deleting
@@ -316,12 +317,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
     enabled: !!agentId && !!agent && !isDeleting,
   });
 
-  // Fetch ElevenLabs voices
-  const { data: elevenLabsVoicesData, isLoading: isLoadingVoices } = useQuery({
-    queryKey: ["elevenlabs-voices"],
-    queryFn: () => fetchElevenLabsVoices(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
+  // Note: ElevenLabs voices query moved below selectedWorkspaces watch to use workspace context
 
   const form = useForm<AgentFormValues>({
     resolver: zodResolver(agentFormSchema),
@@ -330,7 +326,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
       description: "",
       language: "en-US",
       ttsProvider: "elevenlabs",
-      elevenLabsModel: "turbo-v2.5",
+      elevenLabsModel: "eleven_turbo_v2_5",
       elevenLabsVoiceId: undefined,
       ttsSpeed: 1,
       sttProvider: "deepgram",
@@ -366,20 +362,20 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
         name: agent.name,
         description: agent.description ?? "",
         language: agent.language,
-        ttsProvider: "elevenlabs",
-        elevenLabsModel: "turbo-v2.5",
-        elevenLabsVoiceId: undefined,
+        ttsProvider: agent.tts_provider ?? "elevenlabs",
+        elevenLabsModel: agent.tts_model ?? "eleven_turbo_v2_5",
+        elevenLabsVoiceId: agent.tts_voice_id ?? undefined,
         ttsSpeed: 1,
-        sttProvider: "deepgram",
-        deepgramModel: "nova-3",
-        llmProvider: agent.pricing_tier === "premium" ? "openai-realtime" : "openai",
-        llmModel: agent.pricing_tier === "premium" ? "gpt-realtime-2025-08-28" : "gpt-4o",
+        sttProvider: agent.stt_provider ?? "deepgram",
+        deepgramModel: agent.stt_model ?? "nova-3",
+        llmProvider: agent.llm_provider ?? "openai-realtime",
+        llmModel: agent.llm_model ?? "gpt-realtime-2025-08-28",
         voice: agent.voice ?? "marin",
         systemPrompt: agent.system_prompt,
         initialGreeting: agent.initial_greeting ?? "",
         temperature: agent.temperature,
         maxTokens: agent.max_tokens,
-        telephonyProvider: "telnyx",
+        telephonyProvider: agent.telephony_provider ?? "telnyx",
         phoneNumberId: agent.phone_number_id ?? undefined,
         enableRecording: agent.enable_recording,
         enableTranscript: agent.enable_transcript,
@@ -415,6 +411,14 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
   // Get selected workspaces for phone number fetching
   const selectedWorkspaces = form.watch("selectedWorkspaces");
   const telephonyProvider = form.watch("telephonyProvider");
+
+  // Fetch ElevenLabs voices using selected workspace context
+  const { data: elevenLabsVoicesData, isLoading: isLoadingVoices } = useQuery({
+    queryKey: ["elevenlabs-voices", selectedWorkspaces[0]],
+    queryFn: () => fetchElevenLabsVoices(selectedWorkspaces[0]),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    enabled: !!selectedWorkspaces[0],
+  });
 
   // Fetch phone numbers from the first selected workspace
   const { data: phoneNumbers = [], isLoading: isLoadingPhoneNumbers } = useQuery({
@@ -584,8 +588,17 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
       initial_greeting: data.initialGreeting?.trim() ? data.initialGreeting.trim() : null,
       language: data.language,
       voice: data.voice,
+      // Provider settings
+      tts_provider: data.ttsProvider,
+      tts_model: data.elevenLabsModel,
+      tts_voice_id: data.elevenLabsVoiceId ?? null,
+      stt_provider: data.sttProvider,
+      stt_model: data.deepgramModel,
+      llm_provider: data.llmProvider,
+      llm_model: data.llmModel,
       enabled_tools: enabledIntegrations,
       enabled_tool_ids: data.enabledToolIds,
+      telephony_provider: data.telephonyProvider,
       phone_number_id: data.phoneNumberId,
       enable_recording: data.enableRecording,
       enable_transcript: data.enableTranscript,

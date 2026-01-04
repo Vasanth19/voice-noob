@@ -167,7 +167,13 @@ class Agent(Base):
         comment="Granular tool selection: {integration_id: [tool_id1, tool_id2]}",
     )
 
-    # Phone settings
+    # Phone/Telephony settings
+    telephony_provider: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="telnyx",
+        comment="Telephony provider: telnyx or twilio",
+    )
     phone_number_id: Mapped[str | None] = mapped_column(
         String(100), nullable=True, comment="Assigned phone number ID (Telnyx/Twilio)"
     )

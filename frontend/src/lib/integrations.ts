@@ -611,8 +611,7 @@ export const AVAILABLE_INTEGRATIONS: Integration[] = [
         type: "text",
         required: false,
         placeholder: "1abc123def456...",
-        description:
-          "Optional: Default document ID (from the doc URL after /d/)",
+        description: "Optional: Default document ID (from the doc URL after /d/)",
       },
     ],
     documentationUrl: "https://developers.google.com/docs/api/quickstart/js",
@@ -620,8 +619,7 @@ export const AVAILABLE_INTEGRATIONS: Integration[] = [
       {
         id: "docs_get_knowledge",
         name: "Get Knowledge Base",
-        description:
-          "Read entire document content (location, hours, FAQs, menu, policies, etc.)",
+        description: "Read entire document content (location, hours, FAQs, menu, policies, etc.)",
         riskLevel: "safe",
         defaultEnabled: true,
       },
@@ -636,8 +634,7 @@ export const AVAILABLE_INTEGRATIONS: Integration[] = [
       {
         id: "docs_get_section",
         name: "Get Section",
-        description:
-          "Get a specific section by heading (Menu, FAQ, About Us, Location)",
+        description: "Get a specific section by heading (Menu, FAQ, About Us, Location)",
         riskLevel: "safe",
         defaultEnabled: true,
       },

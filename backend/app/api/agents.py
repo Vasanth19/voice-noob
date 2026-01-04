@@ -13,6 +13,7 @@ from app.core.limiter import limiter
 from app.core.public_id import generate_public_id
 from app.db.session import get_db
 from app.models.agent import Agent
+from app.models.phone_number import PhoneNumber
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
 
@@ -47,6 +48,7 @@ class CreateAgentRequest(BaseModel):
         default_factory=dict,
         description="Granular tool selection: {integration_id: [tool_id1, tool_id2]}",
     )
+    telephony_provider: str = Field(default="telnyx", pattern="^(telnyx|twilio)$")
     phone_number_id: str | None = None
     enable_recording: bool = False
     enable_transcript: bool = True
@@ -89,6 +91,7 @@ class UpdateAgentRequest(BaseModel):
         default=None,
         description="Granular tool selection: {integration_id: [tool_id1, tool_id2]}",
     )
+    telephony_provider: str | None = Field(None, pattern="^(telnyx|twilio)$")
     phone_number_id: str | None = None
     enable_recording: bool | None = None
     enable_transcript: bool | None = None
@@ -130,6 +133,7 @@ class AgentResponse(BaseModel):
     llm_model: str
     enabled_tools: list[str]
     enabled_tool_ids: dict[str, list[str]]
+    telephony_provider: str
     phone_number_id: str | None
     enable_recording: bool
     enable_transcript: bool
@@ -180,8 +184,17 @@ async def create_agent(
         system_prompt=agent_request.system_prompt,
         language=agent_request.language,
         voice=agent_request.voice,
+        # Provider settings
+        tts_provider=agent_request.tts_provider,
+        tts_model=agent_request.tts_model,
+        tts_voice_id=agent_request.tts_voice_id,
+        stt_provider=agent_request.stt_provider,
+        stt_model=agent_request.stt_model,
+        llm_provider=agent_request.llm_provider,
+        llm_model=agent_request.llm_model,
         enabled_tools=agent_request.enabled_tools,
         enabled_tool_ids=agent_request.enabled_tool_ids,
+        telephony_provider=agent_request.telephony_provider,
         phone_number_id=agent_request.phone_number_id,
         enable_recording=agent_request.enable_recording,
         enable_transcript=agent_request.enable_transcript,
@@ -201,7 +214,8 @@ async def create_agent(
     await db.commit()
     await db.refresh(agent)
 
-    return _agent_to_response(agent)
+    # New agent has no phone number assigned yet
+    return _agent_to_response(agent, phone_number_id=None)
 
 
 @router.get("", response_model=list[AgentResponse])
@@ -242,7 +256,11 @@ async def list_agents(
     )
     agents = result.scalars().all()
 
-    return [_agent_to_response(agent) for agent in agents]
+    # Batch lookup phone numbers for all agents
+    agent_ids = [agent.id for agent in agents]
+    phone_map = await _get_phone_numbers_for_agents(agent_ids, db)
+
+    return [_agent_to_response(agent, phone_map.get(agent.id)) for agent in agents]
 
 
 @router.get("/{agent_id}", response_model=AgentResponse)
@@ -278,7 +296,8 @@ async def get_agent(
             detail="Agent not found",
         )
 
-    return _agent_to_response(agent)
+    phone_number_id = await _get_phone_number_for_agent(agent.id, db)
+    return _agent_to_response(agent, phone_number_id)
 
 
 @router.delete("/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -356,13 +375,43 @@ async def update_agent(
             detail="Agent not found",
         )
 
-    # Apply updates from request
+    # Handle phone number assignment (single source of truth: PhoneNumber.assigned_agent_id)
+    if update_request.phone_number_id is not None:
+        if update_request.phone_number_id:
+            # Assigning a phone number to this agent
+            # First, clear this agent from any other phone numbers
+            old_phone_result = await db.execute(
+                select(PhoneNumber).where(PhoneNumber.assigned_agent_id == agent.id)
+            )
+            for old_phone in old_phone_result.scalars():
+                old_phone.assigned_agent_id = None
+
+            # Then, assign the new phone number to this agent
+            new_phone_result = await db.execute(
+                select(PhoneNumber).where(
+                    PhoneNumber.provider_id == update_request.phone_number_id
+                )
+            )
+            new_phone = new_phone_result.scalar_one_or_none()
+            if new_phone:
+                new_phone.assigned_agent_id = agent.id
+        else:
+            # Clearing phone number (empty string)
+            old_phone_result = await db.execute(
+                select(PhoneNumber).where(PhoneNumber.assigned_agent_id == agent.id)
+            )
+            for old_phone in old_phone_result.scalars():
+                old_phone.assigned_agent_id = None
+
+    # Apply updates from request (excludes phone_number_id - handled above)
     _apply_agent_updates(agent, update_request)
 
     await db.commit()
     await db.refresh(agent)
 
-    return _agent_to_response(agent)
+    # Get current phone number for response
+    phone_number_id = await _get_phone_number_for_agent(agent.id, db)
+    return _agent_to_response(agent, phone_number_id)
 
 
 def _apply_agent_updates(agent: Agent, request: UpdateAgentRequest) -> None:
@@ -379,9 +428,18 @@ def _apply_agent_updates(agent: Agent, request: UpdateAgentRequest) -> None:
         "system_prompt",
         "language",
         "voice",
+        # Provider settings
+        "tts_provider",
+        "tts_model",
+        "tts_voice_id",
+        "stt_provider",
+        "stt_model",
+        "llm_provider",
+        "llm_model",
         "enabled_tools",
         "enabled_tool_ids",
-        "phone_number_id",
+        "telephony_provider",
+        # phone_number_id handled separately via PhoneNumber table
         "enable_recording",
         "enable_transcript",
         "is_active",
@@ -457,11 +515,52 @@ def _get_provider_config(tier: str) -> dict[str, Any]:
     return configs.get(tier, configs["balanced"])
 
 
-def _agent_to_response(agent: Agent) -> AgentResponse:
+async def _get_phone_number_for_agent(
+    agent_id: uuid.UUID, db: AsyncSession
+) -> str | None:
+    """Get phone number provider_id assigned to an agent.
+
+    Args:
+        agent_id: Agent UUID
+        db: Database session
+
+    Returns:
+        Phone number provider_id or None
+    """
+    result = await db.execute(
+        select(PhoneNumber.provider_id).where(PhoneNumber.assigned_agent_id == agent_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _get_phone_numbers_for_agents(
+    agent_ids: list[uuid.UUID], db: AsyncSession
+) -> dict[uuid.UUID, str]:
+    """Get phone numbers for multiple agents (batch lookup).
+
+    Args:
+        agent_ids: List of agent UUIDs
+        db: Database session
+
+    Returns:
+        Dict mapping agent_id to phone number provider_id
+    """
+    if not agent_ids:
+        return {}
+    result = await db.execute(
+        select(PhoneNumber.assigned_agent_id, PhoneNumber.provider_id).where(
+            PhoneNumber.assigned_agent_id.in_(agent_ids)
+        )
+    )
+    return {row[0]: row[1] for row in result}
+
+
+def _agent_to_response(agent: Agent, phone_number_id: str | None = None) -> AgentResponse:
     """Convert Agent model to response schema.
 
     Args:
         agent: Agent model
+        phone_number_id: Phone number provider_id (from PhoneNumber table)
 
     Returns:
         AgentResponse
@@ -474,9 +573,18 @@ def _agent_to_response(agent: Agent) -> AgentResponse:
         system_prompt=agent.system_prompt,
         language=agent.language,
         voice=agent.voice,
+        # Provider settings
+        tts_provider=agent.tts_provider,
+        tts_model=agent.tts_model,
+        tts_voice_id=agent.tts_voice_id,
+        stt_provider=agent.stt_provider,
+        stt_model=agent.stt_model,
+        llm_provider=agent.llm_provider,
+        llm_model=agent.llm_model,
         enabled_tools=agent.enabled_tools,
         enabled_tool_ids=agent.enabled_tool_ids,
-        phone_number_id=agent.phone_number_id,
+        telephony_provider=agent.telephony_provider,
+        phone_number_id=phone_number_id,  # Now from PhoneNumber table, not Agent
         enable_recording=agent.enable_recording,
         enable_transcript=agent.enable_transcript,
         turn_detection_mode=agent.turn_detection_mode,

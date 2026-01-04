@@ -249,14 +249,13 @@ export default function TestAgentPage() {
     },
   });
 
-  // Fetch all agents (for "All Workspaces" / admin mode)
+  // Fetch all agents (always needed to check pricing tiers for filtering)
   const { data: allAgents = [] } = useQuery<{ id: string; name: string; pricing_tier: string }[]>({
     queryKey: ["agents"],
     queryFn: async () => {
       const response = await api.get("/api/v1/agents");
       return response.data;
     },
-    enabled: selectedWorkspaceId === "all",
   });
 
   // Fetch agents for selected workspace
@@ -270,13 +269,20 @@ export default function TestAgentPage() {
     enabled: !!selectedWorkspaceId && selectedWorkspaceId !== "all",
   });
 
-  // Get the list of agents based on selection mode
+  // Build a set of premium agent IDs for quick lookup
+  const premiumAgentIds = new Set(
+    allAgents
+      .filter((a) => a.pricing_tier === "premium" || a.pricing_tier === "premium-mini")
+      .map((a) => a.id)
+  );
+
+  // Get the list of agents based on selection mode (only premium agents support WebRTC testing)
   const availableAgents =
     selectedWorkspaceId === "all"
       ? allAgents
           .filter((a) => a.pricing_tier === "premium" || a.pricing_tier === "premium-mini")
           .map((a) => ({ agent_id: a.id, agent_name: a.name, is_default: false }))
-      : workspaceAgents;
+      : workspaceAgents.filter((a) => premiumAgentIds.has(a.agent_id));
 
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -303,7 +309,7 @@ export default function TestAgentPage() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
 
-  // Fetch selected agent details
+  // Fetch selected agent details (staleTime: 0 ensures fresh data after settings change)
   const { data: selectedAgent } = useQuery({
     queryKey: ["agent", selectedAgentId],
     queryFn: async () => {
@@ -312,6 +318,7 @@ export default function TestAgentPage() {
       return response.data;
     },
     enabled: !!selectedAgentId,
+    staleTime: 0,
   });
 
   // Clear agent selection when workspace changes
@@ -1072,9 +1079,7 @@ export default function TestAgentPage() {
                       !selectedWorkspaceId
                         ? "Select a workspace first"
                         : availableAgents.length === 0
-                          ? selectedWorkspaceId === "all"
-                            ? "No premium agents found"
-                            : "No agents in this workspace"
+                          ? "No premium agents available"
                           : "Select an agent"
                     }
                   />
@@ -1087,16 +1092,14 @@ export default function TestAgentPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {selectedWorkspaceId &&
-                selectedWorkspaceId !== "all" &&
-                availableAgents.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Add agents to this workspace in{" "}
-                    <Link href="/dashboard/workspaces" className="text-primary hover:underline">
-                      Workspaces
-                    </Link>
-                  </p>
-                )}
+              {selectedWorkspaceId && availableAgents.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Only Premium tier agents support browser testing.{" "}
+                  <Link href="/dashboard/agents" className="text-primary hover:underline">
+                    Update agent tier
+                  </Link>
+                </p>
+              )}
             </div>
 
             <Separator />

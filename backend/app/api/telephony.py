@@ -150,15 +150,28 @@ async def get_telnyx_service(
 
 
 async def get_agent_by_phone_number(phone_number: str, db: AsyncSession) -> Agent | None:
-    """Find agent by assigned phone number."""
+    """Find agent by assigned phone number or provider SID.
+
+    Looks up the phone number in the phone_numbers table and returns
+    the agent assigned to that number. Supports lookup by:
+    - E.164 phone number (e.g., +16308646418)
+    - Provider SID (e.g., PNb1938b8c1408863b962023efed83764e for Twilio)
+    """
+    from app.models.phone_number import PhoneNumber
+
     # Remove + prefix for comparison if present
     normalized = phone_number.lstrip("+")
 
+    # Query PhoneNumber table to find the assigned agent
+    # Match by phone number string OR by provider_id (SID)
     result = await db.execute(
-        select(Agent).where(
-            (Agent.phone_number_id == phone_number)
-            | (Agent.phone_number_id == normalized)
-            | (Agent.phone_number_id == f"+{normalized}")
+        select(Agent)
+        .join(PhoneNumber, PhoneNumber.assigned_agent_id == Agent.id)
+        .where(
+            (PhoneNumber.phone_number == phone_number)
+            | (PhoneNumber.phone_number == normalized)
+            | (PhoneNumber.phone_number == f"+{normalized}")
+            | (PhoneNumber.provider_id == phone_number)
         )
     )
     return result.scalar_one_or_none()
@@ -789,8 +802,9 @@ async def twilio_voice_webhook(
     agent_workspace_id = await get_agent_workspace_id(agent.id, db)
 
     # Create call record for inbound call
+    # Convert integer user_id to UUID for call_records table
     call_record = CallRecord(
-        user_id=agent.user_id,
+        user_id=user_id_to_uuid(agent.user_id),
         workspace_id=agent_workspace_id,
         provider="twilio",
         provider_call_id=call_sid,
@@ -969,8 +983,9 @@ async def telnyx_voice_webhook(
     agent_workspace_id = await get_agent_workspace_id(agent.id, db)
 
     # Create call record for inbound call
+    # Convert integer user_id to UUID for call_records table
     call_record = CallRecord(
-        user_id=agent.user_id,
+        user_id=user_id_to_uuid(agent.user_id),
         workspace_id=agent_workspace_id,
         provider="telnyx",
         provider_call_id=call_control_id,

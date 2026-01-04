@@ -21,6 +21,7 @@ from app.models.agent import Agent
 from app.models.call_record import CallRecord
 from app.models.workspace import AgentWorkspace
 from app.services.gpt_realtime import GPTRealtimeSession
+from app.services.pipeline import PipecatPipelineSession
 
 router = APIRouter(prefix="/ws/telephony", tags=["telephony-ws"])
 logger = structlog.get_logger()
@@ -120,7 +121,7 @@ async def twilio_media_stream(
         # Get workspace for the agent
         workspace_id = await get_agent_workspace_id(agent.id, db)
 
-        # Build agent config
+        # Build agent config with all provider settings
         agent_config = {
             "system_prompt": agent.system_prompt,
             "enabled_tools": agent.enabled_tools,
@@ -128,28 +129,70 @@ async def twilio_media_stream(
             "voice": agent.voice or "shimmer",
             "enable_transcript": agent.enable_transcript,
             "initial_greeting": agent.initial_greeting,
+            # Provider settings for pipeline mode
+            "pricing_tier": agent.pricing_tier,
+            "tts_provider": agent.tts_provider,
+            "tts_model": agent.tts_model,
+            "tts_voice_id": agent.tts_voice_id,
+            "stt_provider": agent.stt_provider,
+            "stt_model": agent.stt_model,
+            "llm_provider": agent.llm_provider,
+            "llm_model": agent.llm_model,
+            "temperature": agent.temperature,
         }
 
-        # Initialize GPT Realtime session
-        async with GPTRealtimeSession(
-            db=db,
-            user_id=user_id_int,
-            agent_config=agent_config,
-            session_id=session_id,
-            workspace_id=workspace_id,
-        ) as realtime_session:
-            # Handle Twilio media stream and capture call_sid
-            call_sid = await _handle_twilio_stream(
-                websocket=websocket,
-                realtime_session=realtime_session,
-                log=log,
-                enable_transcript=agent.enable_transcript,
-            )
+        # Route to appropriate session type based on pricing tier
+        # Premium tiers use OpenAI Realtime (low latency, native audio)
+        # Budget/Balanced tiers use Pipeline mode (STT -> LLM -> TTS)
+        use_realtime = agent.pricing_tier in ("premium", "premium-mini")
 
-            # Save transcript to call record if enabled
-            if agent.enable_transcript and call_sid:
-                transcript = realtime_session.get_transcript()
-                await save_transcript_to_call_record(call_sid, transcript, db, log)
+        log.info(
+            "session_mode_selected",
+            pricing_tier=agent.pricing_tier,
+            mode="realtime" if use_realtime else "pipeline",
+        )
+
+        if use_realtime:
+            # Use GPT Realtime (existing behavior for premium tiers)
+            async with GPTRealtimeSession(
+                db=db,
+                user_id=user_id_int,
+                agent_config=agent_config,
+                session_id=session_id,
+                workspace_id=workspace_id,
+            ) as realtime_session:
+                call_sid = await _handle_twilio_stream(
+                    websocket=websocket,
+                    realtime_session=realtime_session,
+                    log=log,
+                    enable_transcript=agent.enable_transcript,
+                    db=db,
+                    user_id=user_id_int,
+                    workspace_id=workspace_id,
+                )
+
+                if agent.enable_transcript and call_sid:
+                    transcript = realtime_session.get_transcript()
+                    await save_transcript_to_call_record(call_sid, transcript, db, log)
+        else:
+            # Use Pipeline mode (STT -> LLM -> TTS for budget/balanced tiers)
+            async with PipecatPipelineSession(
+                db=db,
+                user_id=user_id_int,
+                agent_config=agent_config,
+                session_id=session_id,
+                workspace_id=workspace_id,
+            ) as pipeline_session:
+                call_sid = await _handle_twilio_stream_pipeline(
+                    websocket=websocket,
+                    pipeline_session=pipeline_session,
+                    log=log,
+                    enable_transcript=agent.enable_transcript,
+                )
+
+                if agent.enable_transcript and call_sid:
+                    transcript = pipeline_session.get_transcript()
+                    await save_transcript_to_call_record(call_sid, transcript, db, log)
 
     except WebSocketDisconnect:
         log.info("twilio_websocket_disconnected")
@@ -164,6 +207,9 @@ async def _handle_twilio_stream(  # noqa: PLR0915
     realtime_session: GPTRealtimeSession,
     log: Any,
     enable_transcript: bool = False,
+    db: AsyncSession | None = None,
+    user_id: int | None = None,
+    workspace_id: uuid.UUID | None = None,
 ) -> str:
     """Handle Twilio Media Stream messages.
 
@@ -289,6 +335,24 @@ async def _handle_twilio_stream(  # noqa: PLR0915
                     except Exception as audio_err:
                         log.exception("audio_send_error", error=str(audio_err))
 
+                # Handle error events from OpenAI
+                elif event_type == "error":
+                    error_data = getattr(event, "error", {})
+                    error_msg = (
+                        getattr(error_data, "message", str(error_data))
+                        if error_data
+                        else "Unknown error"
+                    )
+                    error_type = getattr(error_data, "type", "unknown")
+                    error_code = getattr(error_data, "code", "unknown")
+                    log.error(
+                        "openai_realtime_error",
+                        error_message=error_msg,
+                        error_type=error_type,
+                        error_code=error_code,
+                        raw_error=str(error_data),
+                    )
+
                 # Handle tool calls
                 elif event_type == "response.function_call_arguments.done":
                     log.info(
@@ -376,6 +440,79 @@ async def _handle_twilio_stream(  # noqa: PLR0915
     return call_sid
 
 
+async def _handle_twilio_stream_pipeline(
+    websocket: WebSocket,
+    pipeline_session: PipecatPipelineSession,
+    log: Any,
+    enable_transcript: bool = False,
+) -> str:
+    """Handle Twilio Media Stream for Pipeline mode.
+
+    In Pipeline mode, Pipecat handles the bidirectional audio streaming
+    internally through its transport layer. We just need to:
+    1. Wait for the "start" event to get stream_sid and call_sid
+    2. Pass these to the pipeline session
+    3. Run the pipeline until completion
+
+    Args:
+        websocket: WebSocket connection from Twilio
+        pipeline_session: Pipecat Pipeline session
+        log: Logger instance
+        enable_transcript: Whether to capture transcript
+
+    Returns:
+        The call_sid for transcript saving
+    """
+    stream_sid = ""
+    call_sid = ""
+
+    # Wait for the "start" event to get stream_sid and call_sid
+    try:
+        while True:
+            message = await websocket.receive_text()
+            data = json.loads(message)
+            event = data.get("event", "")
+
+            if event == "connected":
+                log.info("twilio_pipeline_stream_connected")
+
+            elif event == "start":
+                start_data = data.get("start", {})
+                stream_sid = start_data.get("streamSid", "")
+                call_sid = start_data.get("callSid", "")
+                log.info(
+                    "twilio_pipeline_stream_started",
+                    stream_sid=stream_sid,
+                    call_sid=call_sid,
+                )
+                break
+
+            elif event == "stop":
+                log.info("twilio_pipeline_stream_stopped_early")
+                return call_sid
+
+    except WebSocketDisconnect:
+        log.info("twilio_pipeline_disconnected_before_start")
+        return call_sid
+    except Exception as e:
+        log.exception("twilio_pipeline_start_error", error=str(e))
+        return call_sid
+
+    # Run the pipeline with Pipecat handling the bidirectional audio
+    try:
+        log.info("starting_pipecat_pipeline", stream_sid=stream_sid, call_sid=call_sid)
+        await pipeline_session.run(
+            websocket=websocket,
+            stream_sid=stream_sid,
+            call_sid=call_sid,
+        )
+        log.info("pipecat_pipeline_completed")
+    except Exception as e:
+        log.exception("pipecat_pipeline_error", error=str(e))
+
+    return call_sid
+
+
 @router.websocket("/telnyx/{agent_id}")
 async def telnyx_media_stream(
     websocket: WebSocket,
@@ -452,6 +589,9 @@ async def telnyx_media_stream(
                 realtime_session=realtime_session,
                 log=log,
                 enable_transcript=agent.enable_transcript,
+                db=db,
+                user_id=user_id_int,
+                workspace_id=workspace_id,
             )
 
             # Save transcript to call record if enabled
@@ -472,6 +612,9 @@ async def _handle_telnyx_stream(  # noqa: PLR0915
     realtime_session: GPTRealtimeSession,
     log: Any,
     enable_transcript: bool = False,
+    db: AsyncSession | None = None,
+    user_id: int | None = None,
+    workspace_id: uuid.UUID | None = None,
 ) -> str:
     """Handle Telnyx Media Stream messages.
 
@@ -480,6 +623,9 @@ async def _handle_telnyx_stream(  # noqa: PLR0915
         realtime_session: GPT Realtime session
         log: Logger instance
         enable_transcript: Whether to capture transcript
+        db: Database session for caller lookup
+        user_id: User ID for CRM lookup
+        workspace_id: Workspace ID for scoping
 
     Returns:
         The call_control_id for transcript saving

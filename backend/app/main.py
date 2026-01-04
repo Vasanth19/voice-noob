@@ -10,6 +10,18 @@ import bcrypt as _bcrypt_module
 if not hasattr(_bcrypt_module, "__about__"):
     _bcrypt_module.__about__ = SimpleNamespace(__version__=_bcrypt_module.__version__)  # type: ignore[attr-defined]
 
+# Configure loguru BEFORE pipecat is imported (pipecat uses loguru for logging)
+# This reduces verbose DEBUG output from pipecat's internal operations
+import os
+import sys
+
+from loguru import logger as loguru_logger
+
+# Remove default handler and add one with appropriate level
+loguru_logger.remove()
+log_level = os.environ.get("LOGURU_LEVEL", "INFO")
+loguru_logger.add(sys.stderr, level=log_level)
+
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

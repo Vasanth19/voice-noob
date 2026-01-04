@@ -52,8 +52,19 @@ export interface Agent {
   system_prompt: string;
   language: string;
   voice: string;
+  // TTS provider settings
+  tts_provider: "elevenlabs" | "openai" | "google";
+  tts_model: string;
+  tts_voice_id: string | null;
+  // STT provider settings
+  stt_provider: "deepgram" | "openai" | "google";
+  stt_model: string;
+  // LLM provider settings
+  llm_provider: "openai-realtime" | "openai" | "anthropic" | "google";
+  llm_model: string;
   enabled_tools: string[];
   enabled_tool_ids: Record<string, string[]>; // {integration_id: [tool_id1, tool_id2]}
+  telephony_provider: "telnyx" | "twilio";
   phone_number_id: string | null;
   enable_recording: boolean;
   enable_transcript: boolean;
@@ -83,6 +94,7 @@ export interface CreateAgentRequest {
   voice?: string;
   enabled_tools: string[];
   enabled_tool_ids?: Record<string, string[]>; // {integration_id: [tool_id1, tool_id2]}
+  telephony_provider?: "telnyx" | "twilio";
   phone_number_id?: string;
   enable_recording: boolean;
   enable_transcript: boolean;
@@ -140,8 +152,19 @@ export interface UpdateAgentRequest {
   system_prompt?: string;
   language?: string;
   voice?: string;
+  // TTS provider settings
+  tts_provider?: "elevenlabs" | "openai" | "google";
+  tts_model?: string;
+  tts_voice_id?: string | null;
+  // STT provider settings
+  stt_provider?: "deepgram" | "openai" | "google";
+  stt_model?: string;
+  // LLM provider settings
+  llm_provider?: "openai-realtime" | "openai" | "anthropic" | "google";
+  llm_model?: string;
   enabled_tools?: string[];
   enabled_tool_ids?: Record<string, string[]>; // {integration_id: [tool_id1, tool_id2]}
+  telephony_provider?: "telnyx" | "twilio";
   phone_number_id?: string | null;
   enable_recording?: boolean;
   enable_transcript?: boolean;

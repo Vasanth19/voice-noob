@@ -238,7 +238,7 @@ class GoogleSheetsTools:
             if response.status_code == 404:
                 return {
                     "success": False,
-                    "error": f"Spreadsheet not found or not accessible. Make sure the sheet is public or shared.",
+                    "error": "Spreadsheet not found or not accessible. Make sure the sheet is public or shared.",
                 }
 
             if response.status_code != 200:

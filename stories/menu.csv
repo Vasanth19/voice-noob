@@ -1,0 +1,183 @@
+
+Category,Item,Price,Notes
+Popular,Parotta-Goat Salna,16.99,
+Popular,Vaaval Meen (Pomfret Fish) Kulumbu,17.99,
+Popular,Masala Omelette,8.99,
+Popular,Half Tandoori Chicken,18.99,
+Popular,Full Tandoori Chicken,29.99,
+Soup,Rasam (Soup),5.99,"Tamarind and tomato based traditional soup"
+Soup,Kozhi (Chicken) Milagu Rasam,8.99,"Traditional chicken soup made with chicken and house made spices"
+Thaali,Regular Thali Meals [WEEKDAY ONLY],14.99,"Sambar + Rice + Chappathi + veg kuruma + Poriyal+ Kutu+ papad + Rasam + Curd + Pickle + Dessert"
+Chaat,Masala Papad,5.99,
+Chaat,Peanut Chaat,8.99,
+Veg Starter,Samosa,7.99,"2 piece pastry filled with potato fillings. Served with mint or tamarind chutney."
+Veg Starter,Mix Veg Pakkora,9.99,"Deep fried battered mix veg pakkora."
+Veg Starter,Paneer 65,15.99,"Deep fried battered paneer served with onion and lemons."
+Veg Starter,Paneer 555,15.99,"Deep fried Paneer tossed with house made spicy sauce and garnished with cashews."
+Veg Starter,Chilli Paneer,15.99,"Deep Fried Paneer tossed with soy and chilli sauce. Garnished with spring onions."
+Veg Starter,Paneer Manchurian,15.99,"Fried Paneer tossed with soy sauce, corn flour, onion, crushed garlic and ginger."
+Veg Starter,Curry Leaf Paneer,15.99,"Fried Paneer cooked in curry leaf based spices."
+Veg Starter,Nalla Karam Paneer,15.99,"Deep Fried Paneer cooked in spicy house special spices."
+Veg Starter,Medhu Vada,8.99,"Daal fried fritters served with Sambar and coconut chutney."
+Veg Starter,Sambar Vada,10.99,"Deep fried fritter soaked in sambar"
+Veg Starter,Rasam Vada,9.99,"Deep fried fritter soaked in rasam"
+Veg Starter,Thayir (Dahi) Vada,10.99,"Deep fried fritter soaked in yogurt"
+Veg Starter,Mini Sambar Idli,8.99,"Idli served in Sambar"
+Non-Veg Starter,Kalaki,7.99,"Egg beaten with house made sauce, cooked on the tava."
+Non-Veg Starter,Masala Omelette,8.99,"Omelette made with onions, peppers, tomatos and Indian spices."
+Non-Veg Starter,Half Boil,5.99,"Soft-boiled eggs with a runny yolk, seasoned with a touch of salt and pepper."
+Non-Veg Starter,Egg Burji,9.99,"Scrambled eggs cooked with onions, tomatoes, and aromatic spices."
+Non-Veg Starter,Madurai Chicken 65,16.99,"Deep fried battered chicken."
+Non-Veg Starter,Chicken 555,16.99,"Deep Fried chicken tossed with house made spicy sauce. Garnished with cashews."
+Non-Veg Starter,Chicken Manchurian,16.99,"Fried chicken tossed with soy sauce, corn flour, onion, crushed garlic and ginger"
+Non-Veg Starter,Chilli Chicken,16.99,"Deep Fried chicken tossed with soy and chilli sauce."
+Non-Veg Starter,Curry Leaf Chicken,16.99,"Fried chicken cooked in curry leaf based spices."
+Non-Veg Starter,Chicken Chukka,16.99,
+Non-Veg Starter,Nalla Karam Chicken Varuval,16.99,"Deep Fried Chicken cooked in spicy house special spices."
+Non-Veg Starter,Chicken Lollipop,16.99,"Deep fried battered lollipop shaped Chicken wings"
+Non-Veg Starter,Mutton Chukka,18.99,"Goat cubes cooked with house made spices and saute'd with Onion, curry leaves and cilantro."
+Non-Veg Starter,Mutton Kola Urundai,15.99,"Feed fried Mutton balls made with ground goat meat and house made spices"
+Non-Veg Starter,Mutton (Ghee) Roast,18.99,
+Non-Veg Starter,Pomfret Tava Fish Fry,17.99,"Cut Pompano fish marinated overnight and pan fried."
+Non-Veg Starter,Fish 65,15.99,"Deep Fried Battered Tilapia Fish"
+Non-Veg Starter,Apollo Fish,17.99,"Crispy fried fish coated in a tangy, spicy sauce."
+Veg Entree,Veg Kuruma,13.99,"Mixed Vegetable Curry"
+Veg Entree,Paneer Butter Masala,15.99,"Panner cooked with onion tomato paste. Garnished with cream and dried fenugreek leaves."
+Veg Entree,Kadai Vegetable,13.99,"Mixed vegetables stir-fried with bell peppers, tomatoes, and aromatic spices."
+Veg Entree,Chettinad Veg Curry,13.99,"Mixed Veg curry made with chettinad based spices."
+Veg Entree,Aloo Gobi Masala,13.99,"Potato and Cauliflower cooked in house made sauce."
+Veg Entree,Channa Masala,12.99,
+Veg Entree,Mutter Panner,15.99,"Tender paneer and peas in a flavorful, spiced tomato gravy."
+Veg Entree,Navarathna Kuruma,13.99,
+Veg Entree,Kadai Panner,14.99,"Panner cooked with onion tomato paste and house made spices."
+Veg Entree,Saag (Palak) Paneer,15.99,"Paneer cooked with house made spinach sauce."
+Veg Entree,Daal Tadka (Tomato/Spinach),12.99,"Lentils cooked with your choice of Tomato or Spinach."
+Veg Entree,Sambar,12.99,"Authentic lentil based curry cooked with chef choice vegetables."
+Veg Entree,Kara Kuzhambu,12.99,
+Veg Entree,Paneer Tikka Masala,15.99,
+Non veg entree,Andhra Chicken Curry,16.99,"Chicken cooked in spicy Andra based sauce."
+Non veg entree,Andhra Egg Curry,15.99,
+Non veg entree,Andhra Goat Curry,18.99,
+Non veg entree,Butter Chicken,16.99,
+Non veg entree,Chettinad Chicken Curry,16.99,"Chicken cooked with chettinad style masala."
+Non veg entree,Chettinad Chicken Kheema,15.99,"Minced Chicken cooked with chettinad style masala."
+Non veg entree,Chettinad Egg Curry,15.99,"Boiled Egg cooked with chettinad style masala."
+Non veg entree,Chettinad Goat Curry,18.99,"Goat cooked with chettinad style masala."
+Non veg entree,Chettinad Goat Kheema,18.99,"Minced Goat cooked with chettinad style masala."
+Non veg entree,Chicken Tikka Masala,16.99,"Chicken cooked with onion tomato paste, bell peppers. Garnished with cream and dried fenugreek leaves."
+Non veg entree,Kadai Chicken,16.99,"Chicken cooked with onion tomato paste and house made spices."
+Non veg entree,Malabar Fish Curry,17.99,
+Non veg entree,Saag Chicken,16.99,
+Non veg entree,Vaaval Meen (Pomfret Fish) Kulumbu,17.99,"Fish cooked with chettinad style masala."
+Tiffin Combo,Parotta-Veg Kuruma,13.99,
+Tiffin Combo,Parotta-Chicken Salna,15.99,
+Tiffin Combo,Parotta-Goat Salna,16.99,
+Tiffin Combo,Parotta- Chicken Chukka-Chicken Salna,18.99,
+Tiffin Combo,Parotta- Goat Chukka-Goat Salna,20.99,
+Tiffin Combo,Thattu Idli Combo,9.99,
+Tiffin Combo,MK Special Tiffin,16.99,"Idli, Vada, Ghee Pongal, Masala Dosa and Dessert"
+Tiffin Combo,Ghee Pongal,10.99,
+Tiffin Combo,Ghee Pongal Vada,13.99,
+Tiffin Combo,Idli Sambar Chutney,8.99,
+Tiffin Combo,Idli Vada,10.99,
+Tiffin Combo,Poori Masala,13.99,"Deep Fried wheat based bread with potatoe masala"
+Tiffin Combo,Chole Bhatura,15.99,"Deep Fried bread with chickpeas curry"
+Tiffin Combo,Idiyappam Combo,12.99,"Idiyappam with coconut milk and Veg Curry"
+Tiffin Combo,Ghee Podi Idli,10.99,
+Dosa Corner,Kal Dosa,13.99,"Soft, thin pancake made from rice and lentil batter, served plain."
+Dosa Corner,MK Special Mutton Kari Dosa,17.99,
+Dosa Corner,MK Special Chicken Kari Dosa,16.99,
+Dosa Corner,Onion Rava Masala Dosa,16.99,"Semolina dosa with topping of sautéed onions filled with a spiced potato mixture for a hearty, flavorful dish."
+Dosa Corner,Plain Dosa,13.99,
+Dosa Corner,Ghee Dosa,14.99,
+Dosa Corner,Masala Dosa,15.99,
+Dosa Corner,Mysore Masala Dosa,16.99,
+Dosa Corner,Gun Podi Dosa,15.99,
+Dosa Corner,Onion Masala Dosa,16.99,
+Dosa Corner,Egg Dosa,17.99,
+Dosa Corner,Paneer Dosa,17.99,
+Dosa Corner,Rava Dosa,14.99,
+Dosa Corner,Onion Rava Dosa,15.99,
+Dosa Corner,Onion Uthappam,14.99,
+Dosa Corner,Veg Uthappam,14.99,"Thick uthappam loaded with mixed vegetables and spices, soft and flavorful."
+Dosa Corner,Chilli Uthappam,14.99,
+Indo-Chinese,Veg Noodles,15.99,
+Indo-Chinese,Egg Noodles,16.99,
+Indo-Chinese,Chicken Noodles,17.99,
+Indo-Chinese,Veg Fried Rice,14.99,"Indo-Chinese Veg Fried Rice"
+Indo-Chinese,Egg Fried Rice,15.99,"Indo-Chinese Egg Fried Rice"
+Indo-Chinese,Chicken Fried Rice,16.99,"Indo-Chinese Chicken Fried Rice"
+Indo-Chinese,Schezwan Chicken Noodle,16.99,
+Indo-Chinese,Schezwan Egg Noodles,17.99,
+Indo-Chinese,Schezwan Veg Fried Rice,15.99,
+Indo-Chinese,Schezwan Veg Noodle,14.99,
+Indo-Chinese,Schezwan Egg Fried Rice,16.99,
+Indo-Chinese,Schezwan Chicken Fried Rice,17.99,
+Variety-Rice,Bisibellabath,10.99,
+Variety-Rice,Jeera Rice,10.99,
+Variety-Rice,Curd Rice,10.99,
+Tandoori,Half Tandoori Chicken,18.99,"Chicken leg marinated with house made spices and baked in clay oven. Served with chilli mayo."
+Tandoori,Full Tandoori Chicken,29.99,"chicken leg marinated with house made spices and baked in clay oven. Served with Chilli Maya."
+Tandoori,Chicken Tikka Kebab,18.99,"Chicken cubes marinated with house made spices and baked in clay oven. Served with chilli mayo."
+Tandoori,Paneer Tikka,15.99,"Paneer cubes marinated with house made spices and baked in clay oven. Served with chilli mayo."
+MK Special Parotta,Veg kothu parotta,14.99,
+MK Special Parotta,Egg Kothu Parotta,15.99,"Please call restaurant to order for catering events and more options."
+MK Special Parotta,Chicken kothu parotta,16.99,
+MK Special Parotta,Veg Veechu Parotta,15.99,
+MK Special Parotta,Egg Veechu Parotta,16.99,
+MK Special Parotta,Chicken Veechu,19.99,
+MK Special Parotta,Plain Veechu,13.99,
+Kids Menu,Kids Cheese Dosa,8.99,
+Kids Menu,Kids Chocolate Dosa,8.99,
+Kids Menu,Kids Poori Masala,10.79,
+Kids Menu,Kids Veg Noodles,8.99,
+Kids Menu,Kids Egg noodles,9.99,
+Biriyani Takeout,MK Spl Kuska,14.99+,"Traditional Madurai style Seeraga Samba rice cooked in mutton/chicken stock"
+Biriyani Takeout,MK Spl Egg Biriyani,16.99+,"Traditional Madurai style Seeraga Samba egg biriyani"
+Biriyani Takeout,MK Spl Chicken Thokku Biriyani,18.99+,"Traditional Madurai style Seeraga Samba Chicken biriyani cooked in mutton/chicken stock"
+Biriyani Takeout,MK Spl Chicken Fry Biriyani,18.99,"Traditional Madurai style Seeraga Samba Chicken biriyani cooked in mutton/chicken stock"
+Biriyani Takeout,MK Spl Shrimp Thokku Biriyani,19.99+,"Traditional Madurai style Seeraga Samba rice cooked in mutton/chicken stock"
+Biriyani Takeout,Veg Biriyani,14.99+,
+Biriyani Takeout,Paneer Biriyani,17.99+,
+Biriyani Takeout,Egg Biriyani,15.99+,
+Biriyani Takeout,Goat Biryani,19.99+,
+Biriyani Takeout,Chicken Kheema Biriyani,16.99+,
+Biriyani Takeout,Goat Kheema Biriyani,20.99+,
+Breads,Plain Naan,3.99,
+Breads,Garlic Naan,4.99,
+Breads,Butter Naan,4.29,
+Breads,Chilli Naan,5.99,"Naan topped with green chill (Spicy)."
+Breads,Cheese Naan,5.99,
+Breads,Onion Kulcha,5.99,
+Breads,Tandoori Roti,4.99,
+Breads,Tandoori Butter Roti,5.99,
+Breads,Parotta (2 PCS),5.99,
+Breads,Parotta 1 pcs,2.99,
+Drinks,Masala chai & Biscuit,4.99,"Tea made with milk, tea powder, cardamom, cinnamon and ginger."
+Drinks,Mango Lassi,6.99,
+Drinks,Rose Milk,5.99,"Milk made with Rose Syrup."
+Drinks,Buttermilk,5.99,"Buttermilk made with ginger, green chilli, ginger, curry leaves and coriander leaves"
+Drinks,Lime Soda,4.99,
+Drinks,Nanaari Sarbath,5.99,
+Drinks,Soda,1.99,
+Drinks,Water bottle,1.99,
+Drinks,Madurai Special Jigarthanda,9.99,"Jigarthanda is a cold beverage that is famous in the South Indian city of Madurai that is made with milk, almond gum, sarsaparilla root syrup, sugar and ice-cream"
+Drinks,Strawberry Milk shake,8.99,
+Drinks,Chocolate Milk Shake,8.99,
+Drinks,Vanilla Milkshake,8.99,
+Mocktails,Virgin Pinacolada,8.99,
+Mocktails,Virgin Mojito,8.99,
+Mocktails,Shirley Temple,8.99,
+Mocktails,Blue Lagoon,8.99,
+Desserts,Gulab Jamun,7.99,
+Desserts,Rasmalai,8.99,
+Desserts,Pineapple Kesari,6.99,
+Extras,Potato Masala For dosa,2.99,
+Extras,Parotta 1 pcs,2.99,
+Extras,Bature 1pc,5.99,
+Extras,Extra Sambar 4 OZ,1.99,
+Extras,Extra Raita 4 Oz,1.99,
+Extras,Extra Salan 4 Oz,1.99,
+Extras,Steam Rice,3.99,"Note: All entree curries will be served with rice."
+Extras,Poori 1pc,2.99,
+Important information regarding calories,Adults and youth (ages 13 and older) need an average of 2,000 calories a day. Children (ages 4 to 12) need an average of 1,500 calories a day. Individual needs may vary. For additional nutrition information, contact our restaurant.,,"Text from menu footer"
