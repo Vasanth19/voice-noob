@@ -40,12 +40,8 @@ docs/
 *.env.example
 
 # Docker
-Dockerfile
 docker-compose*.yml
 .docker/
-
-# Railway
-railway.toml
 
 # Tests (exclude from production)
 tests/
