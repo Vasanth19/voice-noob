@@ -1,0 +1,12 @@
+# Railway ignore - DO NOT ignore Dockerfile
+__pycache__/
+.venv/
+.git/
+*.log
+.env
+.env.local
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+docs/
