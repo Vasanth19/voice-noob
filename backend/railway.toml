@@ -4,7 +4,7 @@ builder = "nixpacks"
 [deploy]
 numReplicas = 1
 healthcheckPath = "/health"
-healthcheckTimeout = 120
-startCommand = "alembic upgrade head && gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --timeout 120"
+healthcheckTimeout = 300
+startCommand = "python -c 'print(\"Starting...\")' && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
