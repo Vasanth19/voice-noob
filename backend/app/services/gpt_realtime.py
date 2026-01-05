@@ -307,9 +307,9 @@ class GPTRealtimeSession:
             "input_audio_transcription": {"model": "whisper-1"},
             "turn_detection": {
                 "type": "server_vad",
-                "threshold": 0.75,  # Higher = ignores breathing/soft sounds
-                "prefix_padding_ms": 150,
-                "silence_duration_ms": 400,  # Wait longer before responding
+                "threshold": 0.7,           # Filters background noise (cars, restaurants, kids)
+                "prefix_padding_ms": 200,   # Captures start of speech
+                "silence_duration_ms": 600, # Patient - waits for caller in noisy env
             },
             "tools": tools,
             "tool_choice": "auto",

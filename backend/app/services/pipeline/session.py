@@ -376,7 +376,12 @@ class PipecatPipelineSession:
                     audio_out_enabled=True,
                     add_wav_header=False,
                     serializer=serializer,
-                    vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.3)),
+                    vad_analyzer=SileroVADAnalyzer(params=VADParams(
+                        threshold=0.7,              # Filters background chatter/noise
+                        min_speech_duration_ms=300, # Ignores brief sounds (coughs, kid yelps)
+                        min_silence_duration_ms=600,# Tolerates pauses (caller distracted)
+                        stop_secs=0.7,              # Waits longer before responding
+                    )),
                 ),
             )
 
