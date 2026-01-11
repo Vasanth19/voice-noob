@@ -71,8 +71,10 @@ class EmbedSessionResponse(BaseModel):
     websocket_url: str
 
 
-def validate_origin(origin: str | None, allowed_domains: list[str]) -> bool:
-    """Validate that the Origin header matches allowed domains.
+def validate_origin(
+    origin: str | None, allowed_domains: list[str], referer: str | None = None
+) -> bool:
+    """Validate that the Origin/Referer header matches allowed domains.
 
     Supports wildcards: "*.example.com" matches "app.example.com"
     Empty allowed_domains means all origins are allowed.
@@ -80,6 +82,7 @@ def validate_origin(origin: str | None, allowed_domains: list[str]) -> bool:
     Args:
         origin: The Origin header value
         allowed_domains: List of allowed domain patterns
+        referer: The Referer header value (fallback when Origin is missing)
 
     Returns:
         True if origin is allowed, False otherwise
@@ -88,14 +91,18 @@ def validate_origin(origin: str | None, allowed_domains: list[str]) -> bool:
         # Empty list means all origins allowed (for development/testing)
         return True
 
-    if not origin:
+    # Use Origin if available, otherwise try Referer as fallback
+    # (Referer is often forwarded by proxies when Origin isn't)
+    check_value = origin or referer
+
+    if not check_value:
         return False
 
-    # Extract hostname from origin (e.g., "https://example.com" -> "example.com")
+    # Extract hostname from origin/referer (e.g., "https://example.com" -> "example.com")
     try:
         from urllib.parse import urlparse
 
-        parsed = urlparse(origin)
+        parsed = urlparse(check_value)
         hostname = parsed.hostname or ""
     except Exception:
         return False
@@ -129,13 +136,14 @@ async def get_embed_config(
     request: Request,
     db: AsyncSession = Depends(get_db),
     origin: str | None = Header(None),
+    referer: str | None = Header(None),
 ) -> EmbedConfigResponse:
     """Get public agent configuration for widget initialization.
 
     This endpoint returns only the information needed to render the widget.
     It does NOT expose sensitive data like system prompts or API keys.
     """
-    log = logger.bind(endpoint="embed_config", public_id=public_id, origin=origin)
+    log = logger.bind(endpoint="embed_config", public_id=public_id, origin=origin, referer=referer)
 
     # Get agent
     agent = await get_agent_by_public_id(public_id, db)
@@ -151,8 +159,8 @@ async def get_embed_config(
         log.warning("agent_inactive")
         raise HTTPException(status_code=403, detail="Agent is not active")
 
-    # Validate origin
-    if not validate_origin(origin, agent.allowed_domains):
+    # Validate origin (uses Referer as fallback for proxy requests)
+    if not validate_origin(origin, agent.allowed_domains, referer):
         log.warning("origin_not_allowed", allowed=agent.allowed_domains)
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
@@ -180,13 +188,14 @@ async def create_embed_session(
     request: Request,
     db: AsyncSession = Depends(get_db),
     origin: str | None = Header(None),
+    referer: str | None = Header(None),
 ) -> EmbedSessionResponse:
     """Create an ephemeral session for WebRTC/WebSocket connection.
 
     This creates a short-lived session token that can be used to
     establish a voice connection. The token expires after 5 minutes.
     """
-    log = logger.bind(endpoint="embed_session", public_id=public_id, origin=origin)
+    log = logger.bind(endpoint="embed_session", public_id=public_id, origin=origin, referer=referer)
 
     # Get agent
     agent = await get_agent_by_public_id(public_id, db)
@@ -202,8 +211,8 @@ async def create_embed_session(
         log.warning("agent_inactive")
         raise HTTPException(status_code=403, detail="Agent is not active")
 
-    # Validate origin
-    if not validate_origin(origin, agent.allowed_domains):
+    # Validate origin (uses Referer as fallback for proxy requests)
+    if not validate_origin(origin, agent.allowed_domains, referer):
         log.warning("origin_not_allowed", allowed=agent.allowed_domains)
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
@@ -471,6 +480,7 @@ async def get_embed_ephemeral_token(  # noqa: PLR0915
     request: Request,
     db: AsyncSession = Depends(get_db),
     origin: str | None = Header(None),
+    referer: str | None = Header(None),
 ) -> dict[str, Any]:
     """Get an ephemeral token for OpenAI Realtime API WebRTC connection.
 
@@ -489,7 +499,7 @@ async def get_embed_ephemeral_token(  # noqa: PLR0915
     from app.models.workspace import AgentWorkspace
     from app.services.gpt_realtime import build_instructions_with_language
 
-    log = logger.bind(endpoint="embed_token", public_id=public_id, origin=origin)
+    log = logger.bind(endpoint="embed_token", public_id=public_id, origin=origin, referer=referer)
 
     # Get agent
     agent = await get_agent_by_public_id(public_id, db)
@@ -505,8 +515,8 @@ async def get_embed_ephemeral_token(  # noqa: PLR0915
         log.warning("agent_inactive")
         raise HTTPException(status_code=403, detail="Agent is not active")
 
-    # Validate origin
-    if not validate_origin(origin, agent.allowed_domains):
+    # Validate origin (uses Referer as fallback for proxy requests)
+    if not validate_origin(origin, agent.allowed_domains, referer):
         log.warning("origin_not_allowed", allowed=agent.allowed_domains)
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
@@ -630,12 +640,16 @@ async def get_embed_ephemeral_token(  # noqa: PLR0915
             for tool in raw_tools:
                 if tool.get("type") == "function" and "function" in tool:
                     func = tool["function"]
-                    tools.append({
-                        "type": "function",
-                        "name": func.get("name"),
-                        "description": func.get("description", ""),
-                        "parameters": func.get("parameters", {"type": "object", "properties": {}}),
-                    })
+                    tools.append(
+                        {
+                            "type": "function",
+                            "name": func.get("name"),
+                            "description": func.get("description", ""),
+                            "parameters": func.get(
+                                "parameters", {"type": "object", "properties": {}}
+                            ),
+                        }
+                    )
                 else:
                     tools.append(tool)
 
@@ -687,6 +701,7 @@ async def execute_embed_tool_call(
     request: Request,
     db: AsyncSession = Depends(get_db),
     origin: str | None = Header(None),
+    referer: str | None = Header(None),
 ) -> dict[str, Any]:
     """Execute a tool call for an embed widget.
 
@@ -704,6 +719,7 @@ async def execute_embed_tool_call(
         public_id=public_id,
         tool_name=tool_request.tool_name,
         origin=origin,
+        referer=referer,
     )
 
     # Get agent
@@ -716,8 +732,8 @@ async def execute_embed_tool_call(
         log.warning("agent_not_available")
         raise HTTPException(status_code=403, detail="Agent not available")
 
-    # Validate origin
-    if not validate_origin(origin, agent.allowed_domains):
+    # Validate origin (uses Referer as fallback for proxy requests)
+    if not validate_origin(origin, agent.allowed_domains, referer):
         log.warning("origin_not_allowed", allowed=agent.allowed_domains)
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
@@ -791,6 +807,7 @@ async def save_embed_transcript(
     request: Request,
     db: AsyncSession = Depends(get_db),
     origin: str | None = Header(None),
+    referer: str | None = Header(None),
 ) -> dict[str, Any]:
     """Save a call transcript from an embed widget session.
 
@@ -809,6 +826,7 @@ async def save_embed_transcript(
         public_id=public_id,
         session_id=transcript_request.session_id,
         origin=origin,
+        referer=referer,
     )
 
     # Get agent
@@ -821,8 +839,8 @@ async def save_embed_transcript(
         log.warning("agent_not_available")
         raise HTTPException(status_code=403, detail="Agent not available")
 
-    # Validate origin
-    if not validate_origin(origin, agent.allowed_domains):
+    # Validate origin (uses Referer as fallback for proxy requests)
+    if not validate_origin(origin, agent.allowed_domains, referer):
         log.warning("origin_not_allowed", allowed=agent.allowed_domains)
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
