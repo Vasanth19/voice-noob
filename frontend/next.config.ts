@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/:path*`,
       },
+      {
+        // Proxy Twilio/Telnyx webhooks to backend
+        source: "/webhooks/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/webhooks/:path*`,
+      },
+      {
+        // Proxy WebSocket connections to backend
+        source: "/ws/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/ws/:path*`,
+      },
     ];
   },
   async headers() {
