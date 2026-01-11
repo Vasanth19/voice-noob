@@ -20,6 +20,25 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async headers() {
+    return [
+      {
+        // Allow embed pages to be iframed from any origin
+        // The backend API validates allowed_domains per agent
+        source: "/embed/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors *",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "", // Clear X-Frame-Options (CSP frame-ancestors takes precedence)
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
