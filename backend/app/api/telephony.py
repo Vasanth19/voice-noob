@@ -29,6 +29,7 @@ from app.db.session import get_db
 from app.models.agent import Agent
 from app.models.call_record import CallDirection, CallRecord, CallStatus
 from app.models.campaign import Campaign, CampaignContact, CampaignContactStatus
+from app.models.phone_number import PhoneNumber as PhoneNumberModel
 from app.models.workspace import AgentWorkspace
 from app.services.telephony.telnyx_service import TelnyxService
 from app.services.telephony.twilio_service import TwilioService
@@ -364,6 +365,93 @@ async def list_phone_numbers(
     ]
 
 
+@router.post("/phone-numbers/sync")
+async def sync_phone_numbers(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    provider: str = Query("twilio", description="Provider: twilio or telnyx"),
+    workspace_id: str = Query(..., description="Workspace ID for API key isolation"),
+) -> dict[str, int | str]:
+    """Sync phone numbers from provider to database.
+
+    This imports any phone numbers from the provider that aren't already
+    in the database. Useful for phone numbers purchased before database tracking
+    was implemented.
+
+    Args:
+        provider: Telephony provider (twilio or telnyx)
+        current_user: Authenticated user
+        db: Database session
+        workspace_id: Workspace ID for workspace-specific API keys
+
+    Returns:
+        Count of synced phone numbers
+    """
+    log = logger.bind(user_id=current_user.id, provider=provider, workspace_id=workspace_id)
+    log.info("syncing_phone_numbers")
+
+    # Parse workspace_id
+    try:
+        workspace_uuid = uuid.UUID(workspace_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid workspace_id format") from e
+
+    numbers: list[PhoneNumber] = []
+
+    if provider == "twilio":
+        twilio_service = await get_twilio_service(current_user.id, db, workspace_id=workspace_uuid)
+        if not twilio_service:
+            return {"synced": 0, "message": "Twilio credentials not configured"}
+        numbers = await twilio_service.list_phone_numbers()
+
+    elif provider == "telnyx":
+        telnyx_service = await get_telnyx_service(current_user.id, db, workspace_id=workspace_uuid)
+        if not telnyx_service:
+            return {"synced": 0, "message": "Telnyx credentials not configured"}
+        numbers = await telnyx_service.list_phone_numbers()
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid provider. Use 'twilio' or 'telnyx'.")
+
+    # Check which numbers are already in database
+    user_uuid = user_id_to_uuid(current_user.id)
+    synced_count = 0
+
+    for num in numbers:
+        # Check if this phone number already exists in DB
+        existing = await db.execute(
+            select(PhoneNumberModel).where(
+                PhoneNumberModel.user_id == user_uuid,
+                PhoneNumberModel.provider_id == num.id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            continue  # Already exists
+
+        # Create new record
+        db_phone_number = PhoneNumberModel(
+            user_id=user_uuid,
+            workspace_id=workspace_uuid,
+            phone_number=num.phone_number,
+            friendly_name=num.friendly_name,
+            provider=provider,
+            provider_id=num.id,
+            can_receive_calls=num.capabilities.get("voice", True) if num.capabilities else True,
+            can_make_calls=num.capabilities.get("voice", True) if num.capabilities else True,
+            can_receive_sms=num.capabilities.get("sms", False) if num.capabilities else False,
+            can_send_sms=num.capabilities.get("sms", False) if num.capabilities else False,
+            purchased_at=datetime.now(UTC),
+        )
+        db.add(db_phone_number)
+        synced_count += 1
+
+    if synced_count > 0:
+        await db.commit()
+
+    log.info("phone_numbers_synced", count=synced_count)
+    return {"synced": synced_count}
+
+
 @router.post("/phone-numbers/search", response_model=list[PhoneNumberResponse])
 async def search_phone_numbers(
     request: SearchPhoneNumbersRequest,
@@ -518,6 +606,25 @@ async def purchase_phone_number(
 
     else:
         raise HTTPException(status_code=400, detail="Invalid provider. Use 'twilio' or 'telnyx'.")
+
+    # Save purchased phone number to database for agent assignment tracking
+    user_uuid = user_id_to_uuid(current_user.id)
+    db_phone_number = PhoneNumberModel(
+        user_id=user_uuid,
+        workspace_id=workspace_uuid,
+        phone_number=number.phone_number,
+        friendly_name=number.friendly_name,
+        provider=purchase_request.provider,
+        provider_id=number.id,  # Store the provider's ID (SID for Twilio)
+        can_receive_calls=number.capabilities.get("voice", True) if number.capabilities else True,
+        can_make_calls=number.capabilities.get("voice", True) if number.capabilities else True,
+        can_receive_sms=number.capabilities.get("sms", False) if number.capabilities else False,
+        can_send_sms=number.capabilities.get("sms", False) if number.capabilities else False,
+        purchased_at=datetime.now(UTC),
+    )
+    db.add(db_phone_number)
+    await db.commit()
+    log.info("phone_number_saved_to_db", db_id=str(db_phone_number.id), provider_id=number.id)
 
     return PhoneNumberResponse(
         id=number.id,

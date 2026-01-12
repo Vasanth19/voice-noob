@@ -52,6 +52,7 @@ import {
   searchPhoneNumbers,
   purchasePhoneNumber,
   releasePhoneNumber,
+  syncPhoneNumbers,
   type PhoneNumber as ApiPhoneNumber,
   type Provider,
 } from "@/lib/api/telephony";
@@ -154,6 +155,12 @@ export default function PhoneNumbersPage() {
         setPhoneNumbers([]);
         return;
       }
+
+      // Sync phone numbers from providers to database first (imports any missing)
+      await Promise.allSettled([
+        syncPhoneNumbers("telnyx", workspaceId),
+        syncPhoneNumbers("twilio", workspaceId),
+      ]);
 
       // Load phone numbers from both providers
       const [telnyxNumbers, twilioNumbers] = await Promise.allSettled([

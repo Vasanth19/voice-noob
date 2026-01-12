@@ -226,3 +226,26 @@ export async function hangupCall(callId: string, provider: Provider): Promise<vo
     throw new Error(error.detail ?? "Failed to hang up call");
   }
 }
+
+/**
+ * Sync phone numbers from provider to database
+ * Imports any phone numbers that exist in the provider but not in our database
+ */
+export async function syncPhoneNumbers(
+  provider: Provider,
+  workspaceId: string
+): Promise<{ synced: number; message?: string }> {
+  const response = await fetchWithTimeout(
+    `${API_BASE}/api/v1/telephony/phone-numbers/sync?provider=${provider}&workspace_id=${workspaceId}`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(error.detail ?? "Failed to sync phone numbers");
+  }
+
+  return response.json();
+}

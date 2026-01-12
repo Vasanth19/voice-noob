@@ -387,14 +387,29 @@ async def update_agent(
                 old_phone.assigned_agent_id = None
 
             # Then, assign the new phone number to this agent
+            # Look up by provider_id OR phone_number string (for flexibility)
+            phone_id = update_request.phone_number_id
+            normalized_phone = phone_id.lstrip("+") if phone_id else ""
             new_phone_result = await db.execute(
                 select(PhoneNumber).where(
-                    PhoneNumber.provider_id == update_request.phone_number_id
+                    (PhoneNumber.provider_id == phone_id)
+                    | (PhoneNumber.phone_number == phone_id)
+                    | (PhoneNumber.phone_number == f"+{normalized_phone}")
+                    | (PhoneNumber.phone_number == normalized_phone)
                 )
             )
             new_phone = new_phone_result.scalar_one_or_none()
             if new_phone:
                 new_phone.assigned_agent_id = agent.id
+            else:
+                # Log warning but don't fail - phone may not be in DB yet
+                import structlog
+                logger = structlog.get_logger()
+                logger.warning(
+                    "phone_number_not_found_for_assignment",
+                    phone_number_id=phone_id,
+                    agent_id=str(agent.id),
+                )
         else:
             # Clearing phone number (empty string)
             old_phone_result = await db.execute(
