@@ -143,9 +143,20 @@ async def verify_twilio_webhook(request: Request) -> bool:
         logger.warning("missing_twilio_signature")
         raise HTTPException(status_code=403, detail="Missing Twilio signature")
 
-    # Get URL and params
-    url = str(request.url)
+    # Get params
     params = await get_twilio_webhook_params(request)
+
+    # Build the URL that Twilio used for signing
+    # When behind a proxy (Next.js rewrites), use PUBLIC_URL + path
+    # This is the URL Twilio was configured to call, not the internal backend URL
+    if settings.PUBLIC_URL:
+        # Use PUBLIC_URL with the request path (e.g., /webhooks/twilio/voice)
+        url = settings.PUBLIC_URL.rstrip("/") + str(request.url.path)
+        if request.url.query:
+            url += "?" + str(request.url.query)
+    else:
+        # Fallback to request URL if PUBLIC_URL not set
+        url = str(request.url)
 
     # Validate signature
     if not validate_twilio_signature(signature, url, params, auth_token):
