@@ -200,7 +200,7 @@ export default function NewAgentPage() {
       language: data.language,
       enabled_tools: enabledIntegrations,
       enabled_tool_ids: data.enabledToolIds,
-      phone_number_id: data.phoneNumberId,
+      phone_number_id: data.phoneNumberId === "none" ? "" : data.phoneNumberId,
       enable_recording: data.enableRecording,
       enable_transcript: data.enableTranscript,
       initial_greeting: data.initialGreeting?.trim() ? data.initialGreeting.trim() : undefined,

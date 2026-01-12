@@ -599,7 +599,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
       enabled_tools: enabledIntegrations,
       enabled_tool_ids: data.enabledToolIds,
       telephony_provider: data.telephonyProvider,
-      phone_number_id: data.phoneNumberId,
+      phone_number_id: data.phoneNumberId === "none" ? "" : data.phoneNumberId,
       enable_recording: data.enableRecording,
       enable_transcript: data.enableTranscript,
       is_active: data.isActive,
