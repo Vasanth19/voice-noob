@@ -85,6 +85,7 @@ class Settings(BaseSettings):
         "http://localhost:3001",
         "http://localhost:8000",
         "http://localhost:8001",
+        "https://voice-noob-app.growthsystems.ai",
     ]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: list[str] = ["*"]

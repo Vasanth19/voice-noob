@@ -35,6 +35,9 @@ class UserSettings(Base):
     openai_api_key: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="OpenAI API key for GPT Realtime"
     )
+    xai_api_key: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="xAI API key for Grok Realtime"
+    )
     deepgram_api_key: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="Deepgram API key for STT"
     )

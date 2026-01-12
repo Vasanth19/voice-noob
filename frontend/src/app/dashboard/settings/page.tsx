@@ -98,6 +98,22 @@ const API_KEY_PROVIDERS: ApiKeyProvider[] = [
     ],
   },
   {
+    id: "xai",
+    name: "xAI",
+    description: "Powers voice agents with Grok Realtime API - provider diversity alternative to OpenAI.",
+    category: "voice-ai",
+    icon: Brain,
+    documentationUrl: "https://console.x.ai/",
+    fields: [
+      {
+        name: "xai_api_key",
+        label: "API Key",
+        placeholder: "xai-...",
+        settingsKey: "xai_api_key_set",
+      },
+    ],
+  },
+  {
     id: "deepgram",
     name: "Deepgram",
     description: "Fast and accurate speech-to-text transcription for real-time voice recognition.",

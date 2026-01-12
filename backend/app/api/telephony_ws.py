@@ -143,18 +143,46 @@ async def twilio_media_stream(
 
         # Route to appropriate session type based on pricing tier
         # Premium tiers use OpenAI Realtime (low latency, native audio)
+        # Grok-Realtime tier uses xAI Grok Realtime (alternative provider)
         # Budget/Balanced tiers use Pipeline mode (STT -> LLM -> TTS)
-        use_realtime = agent.pricing_tier in ("premium", "premium-mini")
+        use_openai_realtime = agent.pricing_tier in ("premium", "premium-mini")
+        use_grok_realtime = agent.pricing_tier == "grok-realtime"
 
         log.info(
             "session_mode_selected",
             pricing_tier=agent.pricing_tier,
-            mode="realtime" if use_realtime else "pipeline",
+            mode="openai_realtime" if use_openai_realtime else (
+                "grok_realtime" if use_grok_realtime else "pipeline"
+            ),
         )
 
-        if use_realtime:
+        if use_openai_realtime:
             # Use GPT Realtime (existing behavior for premium tiers)
             async with GPTRealtimeSession(
+                db=db,
+                user_id=user_id_int,
+                agent_config=agent_config,
+                session_id=session_id,
+                workspace_id=workspace_id,
+            ) as realtime_session:
+                call_sid = await _handle_twilio_stream(
+                    websocket=websocket,
+                    realtime_session=realtime_session,
+                    log=log,
+                    enable_transcript=agent.enable_transcript,
+                    db=db,
+                    user_id=user_id_int,
+                    workspace_id=workspace_id,
+                )
+
+                if agent.enable_transcript and call_sid:
+                    transcript = realtime_session.get_transcript()
+                    await save_transcript_to_call_record(call_sid, transcript, db, log)
+        elif use_grok_realtime:
+            # Use Grok Realtime (xAI Grok Voice Agent API)
+            from app.services.grok_realtime import GrokRealtimeSession
+
+            async with GrokRealtimeSession(
                 db=db,
                 user_id=user_id_int,
                 agent_config=agent_config,

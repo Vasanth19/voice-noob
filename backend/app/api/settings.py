@@ -23,6 +23,7 @@ class UpdateSettingsRequest(BaseModel):
     """Request to update user settings."""
 
     openai_api_key: str | None = None
+    xai_api_key: str | None = None
     deepgram_api_key: str | None = None
     elevenlabs_api_key: str | None = None
     telnyx_api_key: str | None = None
@@ -35,6 +36,7 @@ class SettingsResponse(BaseModel):
     """Settings response (API keys masked for security)."""
 
     openai_api_key_set: bool
+    xai_api_key_set: bool
     deepgram_api_key_set: bool
     elevenlabs_api_key_set: bool
     telnyx_api_key_set: bool
@@ -116,6 +118,7 @@ async def get_settings(
     if not settings:
         return SettingsResponse(
             openai_api_key_set=False,
+            xai_api_key_set=False,
             deepgram_api_key_set=False,
             elevenlabs_api_key_set=False,
             telnyx_api_key_set=False,
@@ -125,6 +128,7 @@ async def get_settings(
 
     return SettingsResponse(
         openai_api_key_set=bool(settings.openai_api_key),
+        xai_api_key_set=bool(settings.xai_api_key),
         deepgram_api_key_set=bool(settings.deepgram_api_key),
         elevenlabs_api_key_set=bool(settings.elevenlabs_api_key),
         telnyx_api_key_set=bool(settings.telnyx_api_key),
@@ -170,6 +174,8 @@ async def update_settings(
         # Update existing
         if request.openai_api_key is not None:
             settings.openai_api_key = request.openai_api_key or None
+        if request.xai_api_key is not None:
+            settings.xai_api_key = request.xai_api_key or None
         if request.deepgram_api_key is not None:
             settings.deepgram_api_key = request.deepgram_api_key or None
         if request.elevenlabs_api_key is not None:
@@ -190,6 +196,7 @@ async def update_settings(
             user_id=user_uuid,
             workspace_id=workspace_uuid,
             openai_api_key=request.openai_api_key,
+            xai_api_key=request.xai_api_key,
             deepgram_api_key=request.deepgram_api_key,
             elevenlabs_api_key=request.elevenlabs_api_key,
             telnyx_api_key=request.telnyx_api_key,

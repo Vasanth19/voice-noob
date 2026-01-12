@@ -166,12 +166,12 @@ async def realtime_websocket(
             await websocket.close()
             return
 
-        # Check if Premium tier (GPT Realtime only for Premium/Premium-Mini)
-        if agent.pricing_tier not in ("premium", "premium-mini"):
+        # Check if Realtime tier (OpenAI Realtime for Premium/Premium-Mini, Grok Realtime for grok-realtime)
+        if agent.pricing_tier not in ("premium", "premium-mini", "grok-realtime"):
             await websocket.send_json(
                 {
                     "type": "error",
-                    "error": "GPT Realtime only available for Premium tier agents",
+                    "error": "Realtime API only available for Premium and Grok-Realtime tier agents",
                 }
             )
             await websocket.close()

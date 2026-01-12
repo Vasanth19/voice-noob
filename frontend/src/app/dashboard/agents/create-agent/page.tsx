@@ -85,6 +85,36 @@ const REALTIME_VOICES = [
   { id: "verse", name: "Verse", description: "Versatile and expressive" },
 ] as const;
 
+// xAI Grok Realtime API voices (5 native voices)
+const GROK_VOICES = [
+  {
+    id: "Ara",
+    name: "Ara",
+    description: "Warm, friendly female (Recommended)",
+    recommended: true,
+  },
+  {
+    id: "Rex",
+    name: "Rex",
+    description: "Confident male for professional contexts",
+  },
+  {
+    id: "Sal",
+    name: "Sal",
+    description: "Neutral, smooth for versatility",
+  },
+  {
+    id: "Eve",
+    name: "Eve",
+    description: "Energetic female for interactive experiences",
+  },
+  {
+    id: "Leo",
+    name: "Leo",
+    description: "Authoritative male for instructional content",
+  },
+] as const;
+
 // Get integrations that have tools defined
 const INTEGRATIONS_WITH_TOOLS = AVAILABLE_INTEGRATIONS.filter((i) => i.tools && i.tools.length > 0);
 
@@ -166,7 +196,7 @@ const WIZARD_STEPS = [
 ] as const;
 
 const agentFormSchema = z.object({
-  pricingTier: z.enum(["budget", "balanced", "premium-mini", "premium"]).default("premium"),
+  pricingTier: z.enum(["budget", "balanced", "premium-mini", "premium", "grok-realtime"]).default("premium"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional(),
   language: z.string().default("en-US"),
@@ -271,7 +301,7 @@ export default function CreateAgentPage() {
       initial_greeting: data.initialGreeting?.trim() ? data.initialGreeting.trim() : undefined,
       language: data.language,
       voice:
-        data.pricingTier === "premium" || data.pricingTier === "premium-mini"
+        data.pricingTier === "premium" || data.pricingTier === "premium-mini" || data.pricingTier === "grok-realtime"
           ? data.voice
           : undefined,
       enabled_tools: enabledIntegrations,
@@ -655,30 +685,33 @@ export default function CreateAgentPage() {
                     )}
                   />
 
-                  {(pricingTier === "premium" || pricingTier === "premium-mini") && (
+                  {(pricingTier === "premium" || pricingTier === "premium-mini" || pricingTier === "grok-realtime") && (
                     <FormField
                       control={form.control}
                       name="voice"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Voice</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select voice" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {REALTIME_VOICES.map((voice) => (
-                                <SelectItem key={voice.id} value={voice.id}>
-                                  {voice.name} - {voice.description}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const voiceOptions = pricingTier === "grok-realtime" ? GROK_VOICES : REALTIME_VOICES;
+                        return (
+                          <FormItem>
+                            <FormLabel>Voice</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select voice" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {voiceOptions.map((voice) => (
+                                  <SelectItem key={voice.id} value={voice.id}>
+                                    {voice.name} - {voice.description}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                   )}
                 </div>
